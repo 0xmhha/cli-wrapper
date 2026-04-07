@@ -2478,7 +2478,7 @@ git commit -m "test: add fixture binaries for integration tests"
 - Create: `internal/agent/main.go`
 - Create: `internal/agent/main_test.go`
 
-- [ ] **Step 1: Write a sanity test**
+- [x] **Step 1: Write a sanity test**
 
 Create `internal/agent/main_test.go`:
 
@@ -2498,7 +2498,7 @@ func TestDefaultConfig(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run and confirm it fails**
+- [x] **Step 2: Run and confirm it fails**
 
 Run:
 
@@ -2508,7 +2508,7 @@ go test ./internal/agent/ -count=1
 
 Expected: `undefined: DefaultConfig`.
 
-- [ ] **Step 3: Implement the config and agent entry**
+- [x] **Step 3: Implement the config and agent entry**
 
 Create `internal/agent/main.go`:
 
@@ -2631,7 +2631,7 @@ func main() {
 }
 ```
 
-- [ ] **Step 4: Add context helper (placeholder dispatcher)**
+- [x] **Step 4: Add context helper (placeholder dispatcher)**
 
 Create `internal/agent/dispatcher.go` with a minimal placeholder that Task 13 will flesh out:
 
@@ -2686,7 +2686,7 @@ func ctxWithTimeoutSeconds(n int) (context.Context, context.CancelFunc) {
 }
 ```
 
-- [ ] **Step 5: Run the tests and verify the binary builds**
+- [x] **Step 5: Run the tests and verify the binary builds**
 
 Run:
 
@@ -2697,7 +2697,7 @@ go build ./cmd/cliwrap-agent
 
 Expected: test passes, `cliwrap-agent` binary is produced in the working directory.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add internal/agent/ cmd/cliwrap-agent/
@@ -2712,7 +2712,7 @@ git commit -m "feat(agent): add agent binary skeleton with ipc wiring"
 - Create: `internal/agent/runner.go`
 - Create: `internal/agent/runner_test.go`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `internal/agent/runner_test.go`:
 
@@ -2787,7 +2787,7 @@ func TestRunner_CancelTerminatesProcess(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run the test to confirm it fails**
+- [x] **Step 2: Run the test to confirm it fails**
 
 Run:
 
@@ -2797,7 +2797,7 @@ go test ./internal/agent/ -run TestRunner -count=1
 
 Expected: `undefined: NewRunner`.
 
-- [ ] **Step 3: Implement the runner**
+- [x] **Step 3: Implement the runner**
 
 Create `internal/agent/runner.go`:
 
@@ -2948,7 +2948,7 @@ func flattenEnv(env map[string]string) []string {
 }
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run:
 
@@ -2958,7 +2958,7 @@ go test ./internal/agent/ -run TestRunner -count=1 -v -race
 
 Expected: three tests pass with no goroutine leaks.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add internal/agent/runner.go internal/agent/runner_test.go
@@ -2973,7 +2973,7 @@ git commit -m "feat(agent): add Runner with SIGTERM→SIGKILL escalation"
 - Modify: `internal/agent/dispatcher.go`
 - Create: `internal/agent/dispatcher_test.go`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `internal/agent/dispatcher_test.go`:
 
@@ -3052,7 +3052,7 @@ func TestDispatcher_HandlesStartChildAndExit(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run the test to confirm it fails**
+- [x] **Step 2: Run the test to confirm it fails**
 
 Run:
 
@@ -3062,7 +3062,7 @@ go test ./internal/agent/ -run TestDispatcher -count=1
 
 Expected: the dispatcher's `Handle` is still a no-op, so no lifecycle messages arrive.
 
-- [ ] **Step 3: Extend the Dispatcher**
+- [x] **Step 3: Extend the Dispatcher**
 
 Replace `internal/agent/dispatcher.go` with:
 
@@ -3211,7 +3211,7 @@ func ctxWithTimeoutSeconds(n int) (context.Context, context.CancelFunc) {
 }
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run:
 
@@ -3221,7 +3221,7 @@ go test ./internal/agent/ -run TestDispatcher -count=1 -v -race
 
 Expected: the dispatcher test sees `CHILD_STARTED` then `CHILD_EXITED` with exit code 7.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add internal/agent/dispatcher.go internal/agent/dispatcher_test.go

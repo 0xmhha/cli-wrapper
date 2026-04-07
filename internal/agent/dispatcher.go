@@ -8,25 +8,118 @@ import (
 	"github.com/cli-wrapper/cli-wrapper/internal/ipc"
 )
 
-// Dispatcher routes inbound IPC messages and owns outbound message sending.
-// Task 14 expands this with real routing.
+// Dispatcher routes inbound IPC messages and coordinates child lifecycles.
 type Dispatcher struct {
-	conn *ipc.Conn
-	mu   sync.Mutex
+	conn   *ipc.Conn
+	runner *Runner
+
+	mu         sync.Mutex
+	cancelFn   context.CancelFunc
+	runningPID int
+	wg         sync.WaitGroup
 }
 
 // NewDispatcher constructs a Dispatcher bound to conn.
 func NewDispatcher(conn *ipc.Conn) *Dispatcher {
-	return &Dispatcher{conn: conn}
+	return &Dispatcher{conn: conn, runner: NewRunner()}
 }
 
-// Handle processes an inbound message. Task 14 adds real routing.
+// Handle processes an inbound message from the host.
 func (d *Dispatcher) Handle(msg ipc.OutboxMessage) {
-	// no-op placeholder
-	_ = msg
+	switch msg.Header.MsgType {
+	case ipc.MsgHello:
+		_ = d.SendControl(ipc.MsgHelloAck, ipc.HelloAckPayload{ProtocolVersion: uint8(ipc.ProtocolVersion)}, false)
+	case ipc.MsgStartChild:
+		var p ipc.StartChildPayload
+		if err := ipc.DecodePayload(msg.Payload, &p); err != nil {
+			_ = d.SendControl(ipc.MsgChildError, ipc.ChildErrorPayload{Phase: "decode", Message: err.Error()}, false)
+			return
+		}
+		d.startChild(p)
+	case ipc.MsgStopChild:
+		var p ipc.StopChildPayload
+		_ = ipc.DecodePayload(msg.Payload, &p)
+		d.stopChild(time.Duration(p.TimeoutMs) * time.Millisecond)
+	case ipc.MsgPing:
+		_ = d.SendControl(ipc.MsgPong, nil, false)
+	case ipc.MsgShutdown:
+		d.stopChild(5 * time.Second)
+	}
 }
 
-// SendControl serializes and enqueues a control-plane message.
+func (d *Dispatcher) startChild(p ipc.StartChildPayload) {
+	d.mu.Lock()
+	if d.cancelFn != nil {
+		d.mu.Unlock()
+		_ = d.SendControl(ipc.MsgChildError, ipc.ChildErrorPayload{Phase: "start", Message: "child already running"}, false)
+		return
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	d.cancelFn = cancel
+	d.mu.Unlock()
+
+	d.wg.Add(1)
+	go func() {
+		defer d.wg.Done()
+		res, err := d.runner.Run(ctx, RunSpec{
+			Command:     p.Command,
+			Args:        p.Args,
+			Env:         p.Env,
+			WorkDir:     p.WorkDir,
+			StopTimeout: time.Duration(p.StopTimeout) * time.Millisecond,
+			OnStarted: func(pid int) {
+				d.mu.Lock()
+				d.runningPID = pid
+				d.mu.Unlock()
+				_ = d.SendControl(ipc.MsgChildStarted, ipc.ChildStartedPayload{
+					PID:       int32(pid),
+					StartedAt: time.Now().UnixNano(),
+				}, false)
+			},
+		})
+		if err != nil {
+			_ = d.SendControl(ipc.MsgChildError, ipc.ChildErrorPayload{Phase: "exec", Message: err.Error()}, false)
+			d.clearRunning()
+			return
+		}
+
+		_ = d.SendControl(ipc.MsgChildExited, ipc.ChildExitedPayload{
+			PID:      int32(res.PID),
+			ExitCode: int32(res.ExitCode),
+			Signal:   int32(res.Signal),
+			ExitedAt: res.ExitedAt.UnixNano(),
+			Reason:   res.Reason,
+		}, false)
+
+		d.clearRunning()
+	}()
+}
+
+func (d *Dispatcher) stopChild(timeout time.Duration) {
+	d.mu.Lock()
+	cancel := d.cancelFn
+	d.mu.Unlock()
+	if cancel == nil {
+		return
+	}
+	cancel()
+	if timeout <= 0 {
+		timeout = 5 * time.Second
+	}
+	// cancel() triggers Runner's SIGTERM->SIGKILL escalation inside the
+	// RunSpec.StopTimeout window. After that, Runner.Run returns and
+	// wg.Done() fires. So wg.Wait() is bounded by StopTimeout.
+	d.wg.Wait()
+}
+
+func (d *Dispatcher) clearRunning() {
+	d.mu.Lock()
+	d.cancelFn = nil
+	d.runningPID = 0
+	d.mu.Unlock()
+}
+
+// SendControl serializes payload and enqueues it as an outbound frame.
 func (d *Dispatcher) SendControl(t ipc.MsgType, payload any, ackRequired bool) error {
 	var data []byte
 	var err error
