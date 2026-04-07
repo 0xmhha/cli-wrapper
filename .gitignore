@@ -1,0 +1,20 @@
+# Binaries
+/bin/
+/dist/
+cliwrap
+cliwrap-agent
+
+# Test artifacts
+*.test
+*.out
+coverage.txt
+testdata/fuzz/
+
+# Editor
+.idea/
+.vscode/
+*.swp
+*~
+
+# OS
+.DS_Store
