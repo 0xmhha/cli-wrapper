@@ -24,3 +24,11 @@ lint: fmt vet
 cover:
 	$(GO) test -race -coverprofile=coverage.txt -covermode=atomic $(PKG)
 	$(GO) tool cover -func=coverage.txt | tail -n 1
+
+.PHONY: fixtures
+fixtures:
+	mkdir -p test/fixtures/bin
+	$(GO) build -o test/fixtures/bin/fixture-echo   ./test/fixtures/echo
+	$(GO) build -o test/fixtures/bin/fixture-noisy  ./test/fixtures/noisy
+	$(GO) build -o test/fixtures/bin/fixture-crasher ./test/fixtures/crasher
+	$(GO) build -o test/fixtures/bin/fixture-hanger ./test/fixtures/hanger

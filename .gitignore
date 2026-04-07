@@ -3,6 +3,7 @@
 /dist/
 /cliwrap
 /cliwrap-agent
+test/fixtures/bin/
 
 # Test artifacts
 *.test
