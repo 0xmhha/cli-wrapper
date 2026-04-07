@@ -1322,7 +1322,7 @@ git commit -m "feat(logcollect): add FileRotator with size-based rotation"
 - Create: `internal/logcollect/collector.go`
 - Create: `internal/logcollect/collector_test.go`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `internal/logcollect/collector_test.go`:
 
@@ -1357,7 +1357,7 @@ func TestCollector_UnknownProcessReturnsNil(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run the tests and confirm they fail**
+- [x] **Step 2: Run the tests and confirm they fail**
 
 Run:
 
@@ -1367,7 +1367,7 @@ go test ./internal/logcollect/ -run TestCollector -count=1
 
 Expected: undefined types.
 
-- [ ] **Step 3: Implement Sink interface and Collector**
+- [x] **Step 3: Implement Sink interface and Collector**
 
 Create `internal/logcollect/sink.go`:
 
@@ -1493,7 +1493,7 @@ func (c *Collector) Close() {
 }
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run:
 
@@ -1503,7 +1503,7 @@ go test ./internal/logcollect/ -run TestCollector -count=1 -v -race
 
 Expected: two tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add internal/logcollect/sink.go internal/logcollect/collector.go internal/logcollect/collector_test.go
@@ -1525,7 +1525,7 @@ git commit -m "feat(logcollect): add Sink interface and Collector dispatcher"
 - Create: `internal/cwtypes/types.go`
 - Create: `internal/cwtypes/types_test.go`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `internal/cwtypes/types_test.go`:
 
@@ -1591,7 +1591,7 @@ func TestState_String(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run the tests and confirm they fail**
+- [x] **Step 2: Run the tests and confirm they fail**
 
 Run:
 
@@ -1601,7 +1601,7 @@ go test ./internal/cwtypes/ -count=1
 
 Expected: undefined types.
 
-- [ ] **Step 3: Implement the types**
+- [x] **Step 3: Implement the types**
 
 Create `internal/cwtypes/types.go`:
 
@@ -1785,7 +1785,7 @@ func (e *SpecValidationError) Is(target error) bool {
 }
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run:
 
@@ -1795,7 +1795,7 @@ go test ./internal/cwtypes/ -count=1 -v -race
 
 Expected: five tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add internal/cwtypes/
