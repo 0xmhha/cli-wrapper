@@ -35,13 +35,13 @@ func TestHeaderRoundTrip(t *testing.T) {
 			MsgType: MsgLogChunk,
 			Flags:   FlagAckRequired,
 			SeqNo:   0xDEADBEEFCAFEBABE,
-			Length:   1024,
+			Length:  1024,
 		}},
 		{"max length", Header{
 			MsgType: MsgLogFileRef,
 			Flags:   FlagFileRef | FlagAckRequired,
 			SeqNo:   1,
-			Length:   MaxPayloadSize,
+			Length:  MaxPayloadSize,
 		}},
 	}
 	for _, tc := range cases {
