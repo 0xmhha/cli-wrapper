@@ -615,7 +615,7 @@ git commit -m "feat(event): add Bus interface and Filter matching"
 - Create: `internal/eventbus/bus.go`
 - Create: `internal/eventbus/bus_test.go`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `internal/eventbus/bus_test.go`:
 
@@ -706,7 +706,7 @@ func TestBus_SlowSubscriberIsDropped(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run the tests and confirm they fail**
+- [x] **Step 2: Run the tests and confirm they fail**
 
 Run:
 
@@ -716,7 +716,7 @@ go test ./internal/eventbus/ -count=1
 
 Expected: `undefined: New`, etc.
 
-- [ ] **Step 3: Implement the bus**
+- [x] **Step 3: Implement the bus**
 
 Create `internal/eventbus/bus.go`:
 
@@ -879,7 +879,7 @@ func (s *subscription) closeChannel() {
 }
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run:
 
@@ -889,7 +889,7 @@ go test ./internal/eventbus/ -count=1 -race -v
 
 Expected: all three tests pass with `goleak.VerifyNone`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add internal/eventbus/
@@ -904,7 +904,7 @@ git commit -m "feat(eventbus): add in-memory bus with slow-subscriber policy"
 - Create: `internal/logcollect/ringbuf.go`
 - Create: `internal/logcollect/ringbuf_test.go`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `internal/logcollect/ringbuf_test.go`:
 
@@ -953,7 +953,7 @@ func TestRingBuffer_Size(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run the tests and confirm they fail**
+- [x] **Step 2: Run the tests and confirm they fail**
 
 Run:
 
@@ -963,7 +963,7 @@ go test ./internal/logcollect/ -run TestRingBuffer -count=1
 
 Expected: `undefined: NewRingBuffer`.
 
-- [ ] **Step 3: Implement the ring buffer**
+- [x] **Step 3: Implement the ring buffer**
 
 Create `internal/logcollect/ringbuf.go`:
 
@@ -1047,7 +1047,7 @@ func (r *RingBuffer) Size() int {
 }
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run:
 
@@ -1057,7 +1057,7 @@ go test ./internal/logcollect/ -run TestRingBuffer -count=1 -v -race
 
 Expected: four tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add internal/logcollect/ringbuf.go internal/logcollect/ringbuf_test.go
@@ -1072,7 +1072,7 @@ git commit -m "feat(logcollect): add byte ring buffer with FIFO eviction"
 - Create: `internal/logcollect/rotator.go`
 - Create: `internal/logcollect/rotator_test.go`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `internal/logcollect/rotator_test.go`:
 
@@ -1133,7 +1133,7 @@ func TestRotator_EnforcesMaxFiles(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run the tests and confirm they fail**
+- [x] **Step 2: Run the tests and confirm they fail**
 
 Run:
 
@@ -1143,7 +1143,7 @@ go test ./internal/logcollect/ -run TestRotator -count=1
 
 Expected: `undefined: NewFileRotator`.
 
-- [ ] **Step 3: Implement the rotator**
+- [x] **Step 3: Implement the rotator**
 
 Create `internal/logcollect/rotator.go`:
 
@@ -1296,7 +1296,7 @@ func rotatedPath(opts RotatorOptions, n int) string {
 }
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run:
 
@@ -1306,7 +1306,7 @@ go test ./internal/logcollect/ -run TestRotator -count=1 -v -race
 
 Expected: two tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add internal/logcollect/rotator.go internal/logcollect/rotator_test.go
