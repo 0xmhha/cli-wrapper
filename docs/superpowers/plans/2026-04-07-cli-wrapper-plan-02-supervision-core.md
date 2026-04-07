@@ -2001,7 +2001,7 @@ git commit -m "feat(cliwrap): add Spec, Status, State types and validation"
 - Create: `pkg/cliwrap/spec_builder.go`
 - Create: `pkg/cliwrap/spec_builder_test.go`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `pkg/cliwrap/spec_builder_test.go`:
 
@@ -2040,7 +2040,7 @@ func TestSpecBuilder_FailsOnInvalidID(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run the test to confirm it fails**
+- [x] **Step 2: Run the test to confirm it fails**
 
 Run:
 
@@ -2050,7 +2050,7 @@ go test ./pkg/cliwrap/ -run TestSpecBuilder -count=1
 
 Expected: `undefined: NewSpec`.
 
-- [ ] **Step 3: Implement the builder**
+- [x] **Step 3: Implement the builder**
 
 Create `pkg/cliwrap/spec_builder.go`:
 
@@ -2148,7 +2148,7 @@ func (b *SpecBuilder) Build() (Spec, error) {
 }
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run:
 
@@ -2158,7 +2158,7 @@ go test ./pkg/cliwrap/ -run TestSpecBuilder -count=1 -v
 
 Expected: two tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add pkg/cliwrap/spec_builder.go pkg/cliwrap/spec_builder_test.go
@@ -2173,7 +2173,7 @@ git commit -m "feat(cliwrap): add SpecBuilder fluent API"
 - Create: `internal/supervise/restart.go`
 - Create: `internal/supervise/restart_test.go`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `internal/supervise/restart_test.go`:
 
@@ -2223,7 +2223,7 @@ func TestExponentialBackoff_WithJitterProducesVariance(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run the tests to confirm they fail**
+- [x] **Step 2: Run the tests to confirm they fail**
 
 Run:
 
@@ -2233,7 +2233,7 @@ go test ./internal/supervise/ -count=1
 
 Expected: `undefined: ExponentialBackoff`.
 
-- [ ] **Step 3: Implement the backoff**
+- [x] **Step 3: Implement the backoff**
 
 Create `internal/supervise/restart.go`:
 
@@ -2292,7 +2292,7 @@ func (b *ExponentialBackoff) Next(attempt int) time.Duration {
 }
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run:
 
@@ -2302,7 +2302,7 @@ go test ./internal/supervise/ -count=1 -v
 
 Expected: two tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add internal/supervise/
@@ -2320,7 +2320,7 @@ git commit -m "feat(supervise): add ExponentialBackoff strategy"
 - Create: `test/fixtures/hanger/main.go`
 - Create: `test/fixtures/build.go`
 
-- [ ] **Step 1: Create fixture-echo**
+- [x] **Step 1: Create fixture-echo**
 
 Create `test/fixtures/echo/main.go`:
 
@@ -2342,7 +2342,7 @@ func main() {
 }
 ```
 
-- [ ] **Step 2: Create fixture-noisy**
+- [x] **Step 2: Create fixture-noisy**
 
 Create `test/fixtures/noisy/main.go`:
 
@@ -2369,7 +2369,7 @@ func main() {
 }
 ```
 
-- [ ] **Step 3: Create fixture-crasher**
+- [x] **Step 3: Create fixture-crasher**
 
 Create `test/fixtures/crasher/main.go`:
 
@@ -2392,7 +2392,7 @@ func main() {
 }
 ```
 
-- [ ] **Step 4: Create fixture-hanger**
+- [x] **Step 4: Create fixture-hanger**
 
 Create `test/fixtures/hanger/main.go`:
 
@@ -2421,7 +2421,7 @@ func main() {
 }
 ```
 
-- [ ] **Step 5: Add a build helper**
+- [x] **Step 5: Add a build helper**
 
 Create `test/fixtures/build.go`:
 
@@ -2437,7 +2437,7 @@ Create `test/fixtures/build.go`:
 package fixtures
 ```
 
-- [ ] **Step 6: Add a Makefile target**
+- [x] **Step 6: Add a Makefile target**
 
 Open `Makefile` and append:
 
@@ -2451,7 +2451,7 @@ fixtures:
 	$(GO) build -o test/fixtures/bin/fixture-hanger ./test/fixtures/hanger
 ```
 
-- [ ] **Step 7: Build the fixtures and verify**
+- [x] **Step 7: Build the fixtures and verify**
 
 Run:
 
@@ -2462,7 +2462,7 @@ ls -1 test/fixtures/bin/
 
 Expected: four binaries listed.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add test/fixtures/ Makefile
