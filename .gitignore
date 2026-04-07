@@ -1,8 +1,8 @@
 # Binaries
 /bin/
 /dist/
-cliwrap
-cliwrap-agent
+/cliwrap
+/cliwrap-agent
 
 # Test artifacts
 *.test
@@ -18,3 +18,5 @@ testdata/fuzz/
 
 # OS
 .DS_Store
+
+.claude/settings.local.json
