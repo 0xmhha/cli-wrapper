@@ -226,7 +226,7 @@ git commit -m "feat(platform): add OS abstraction for executable lookup and sign
 - Create: `pkg/event/event.go`
 - Create: `pkg/event/event_test.go`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `pkg/event/event_test.go`:
 
@@ -259,7 +259,7 @@ func TestEventInterface_Implementations(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run the test and confirm it fails**
+- [x] **Step 2: Run the test and confirm it fails**
 
 Run:
 
@@ -269,7 +269,7 @@ go test ./pkg/event/ -count=1
 
 Expected: undefined types.
 
-- [ ] **Step 3: Implement event types**
+- [x] **Step 3: Implement event types**
 
 Create `pkg/event/event.go`:
 
@@ -440,7 +440,7 @@ func NewBackpressureStall(id string, at time.Time, endpoint string, size, max ui
 }
 ```
 
-- [ ] **Step 4: Run the tests**
+- [x] **Step 4: Run the tests**
 
 Run:
 
@@ -450,7 +450,7 @@ go test ./pkg/event/ -count=1 -race -v
 
 Expected: `TestEventInterface_Implementations` passes.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add pkg/event/
