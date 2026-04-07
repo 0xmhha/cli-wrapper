@@ -465,7 +465,7 @@ git commit -m "feat(event): add event types with sealed interface pattern"
 - Create: `pkg/event/bus.go`
 - Create: `pkg/event/bus_test.go`
 
-- [ ] **Step 1: Write the failing interface contract test**
+- [x] **Step 1: Write the failing interface contract test**
 
 Create `pkg/event/bus_test.go`:
 
@@ -518,7 +518,7 @@ func TestFilter_MatchesByProcessID(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run the tests and confirm they fail**
+- [x] **Step 2: Run the tests and confirm they fail**
 
 Run:
 
@@ -528,7 +528,7 @@ go test ./pkg/event/ -run TestBus -count=1
 
 Expected: undefined types.
 
-- [ ] **Step 3: Implement Bus, Filter, Subscription**
+- [x] **Step 3: Implement Bus, Filter, Subscription**
 
 Create `pkg/event/bus.go`:
 
@@ -590,7 +590,7 @@ func (f Filter) Matches(e Event) bool {
 }
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run:
 
@@ -600,7 +600,7 @@ go test ./pkg/event/ -count=1 -race -v
 
 Expected: all four tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add pkg/event/bus.go pkg/event/bus_test.go
