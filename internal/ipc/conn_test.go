@@ -85,3 +85,34 @@ func TestConn_CloseIsIdempotentAndLeakFree(t *testing.T) {
 	require.NoError(t, ca.Close(ctx)) // second close is no-op
 	require.NoError(t, cb.Close(ctx))
 }
+
+func BenchmarkConn_Throughput(b *testing.B) {
+	sa, sb := net.Pipe()
+	dirA := b.TempDir()
+	dirB := b.TempDir()
+
+	ca, _ := NewConn(ConnConfig{RWC: sa, SpillerDir: dirA, Capacity: 1024, WALBytes: 1 << 20})
+	cb, _ := NewConn(ConnConfig{RWC: sb, SpillerDir: dirB, Capacity: 1024, WALBytes: 1 << 20})
+
+	done := make(chan struct{}, b.N)
+	cb.OnMessage(func(OutboxMessage) { done <- struct{}{} })
+
+	ca.Start()
+	cb.Start()
+
+	payload := make([]byte, 256)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		ca.Send(OutboxMessage{
+			Header:  Header{MsgType: MsgLogChunk, SeqNo: uint64(i + 1), Length: uint32(len(payload))},
+			Payload: payload,
+		})
+		<-done
+	}
+	b.StopTimer()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	_ = ca.Close(ctx)
+	_ = cb.Close(ctx)
+}
