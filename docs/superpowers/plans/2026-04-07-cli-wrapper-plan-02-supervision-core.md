@@ -1815,7 +1815,7 @@ git commit -m "feat(cwtypes): add shared types leaf package to break import cycl
 - Create: `pkg/cliwrap/types.go`
 - Create: `pkg/cliwrap/types_test.go`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `pkg/cliwrap/types_test.go`:
 
@@ -1881,7 +1881,7 @@ func TestState_String(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run the tests and confirm they fail**
+- [x] **Step 2: Run the tests and confirm they fail**
 
 Run:
 
@@ -1891,7 +1891,7 @@ go test ./pkg/cliwrap/ -count=1
 
 Expected: undefined types.
 
-- [ ] **Step 3: Implement the re-export layer**
+- [x] **Step 3: Implement the re-export layer**
 
 Create `pkg/cliwrap/types.go`:
 
@@ -1944,7 +1944,7 @@ const (
 )
 ```
 
-- [ ] **Step 4: Create errors file (depends on SpecValidationError)**
+- [x] **Step 4: Create errors file (depends on SpecValidationError)**
 
 Create `pkg/cliwrap/errors.go`:
 
@@ -1976,7 +1976,7 @@ var (
 )
 ```
 
-- [ ] **Step 5: Run the tests to verify they pass**
+- [x] **Step 5: Run the tests to verify they pass**
 
 Run:
 
@@ -1986,7 +1986,7 @@ go test ./pkg/cliwrap/ -count=1 -v
 
 Expected: five tests pass.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add pkg/cliwrap/types.go pkg/cliwrap/errors.go pkg/cliwrap/types_test.go
