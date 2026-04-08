@@ -782,7 +782,7 @@ git commit -m "feat(config): add YAML loader with env expansion and validation"
 - Create: `internal/mgmt/proto.go`
 - Create: `internal/mgmt/proto_test.go`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `internal/mgmt/proto_test.go`:
 
@@ -827,7 +827,7 @@ func TestProto_PayloadRoundTrip(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run to confirm it fails**
+- [x] **Step 2: Run to confirm it fails**
 
 Run:
 
@@ -837,7 +837,7 @@ go test ./internal/mgmt/ -count=1
 
 Expected: undefined.
 
-- [ ] **Step 3: Implement the types**
+- [x] **Step 3: Implement the types**
 
 Create `internal/mgmt/proto.go`:
 
@@ -924,7 +924,7 @@ type EventsStreamPayload struct {
 }
 ```
 
-- [ ] **Step 4: Run the tests**
+- [x] **Step 4: Run the tests**
 
 Run:
 
@@ -934,7 +934,7 @@ go test ./internal/mgmt/ -count=1 -v
 
 Expected: two tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add internal/mgmt/proto.go internal/mgmt/proto_test.go
@@ -949,7 +949,7 @@ git commit -m "feat(mgmt): add management protocol message types and payloads"
 - Create: `internal/mgmt/server.go`
 - Create: `internal/mgmt/server_test.go`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `internal/mgmt/server_test.go`:
 
@@ -1026,7 +1026,7 @@ func TestServer_ListRoundTrip(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run to confirm it fails**
+- [x] **Step 2: Run to confirm it fails**
 
 Run:
 
@@ -1036,7 +1036,7 @@ go test ./internal/mgmt/ -run TestServer -count=1
 
 Expected: undefined.
 
-- [ ] **Step 3: Implement the server**
+- [x] **Step 3: Implement the server**
 
 Create `internal/mgmt/server.go`:
 
@@ -1207,7 +1207,7 @@ func (s *Server) Close(ctx context.Context) error {
 }
 ```
 
-- [ ] **Step 4: Run the tests**
+- [x] **Step 4: Run the tests**
 
 Run:
 
@@ -1217,7 +1217,7 @@ go test ./internal/mgmt/ -count=1 -race -v
 
 Expected: tests pass with no goroutine leaks.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add internal/mgmt/server.go internal/mgmt/server_test.go
@@ -1231,7 +1231,7 @@ git commit -m "feat(mgmt): add management socket server"
 **Files:**
 - Create: `internal/mgmt/client.go`
 
-- [ ] **Step 1: Write the implementation (simple wrapper)**
+- [x] **Step 1: Write the implementation (simple wrapper)**
 
 Create `internal/mgmt/client.go`:
 
@@ -1293,7 +1293,7 @@ func (c *Client) Call(t ipc.MsgType, payload any) (ipc.Header, []byte, error) {
 }
 ```
 
-- [ ] **Step 2: Verify the package still builds**
+- [x] **Step 2: Verify the package still builds**
 
 Run:
 
@@ -1303,7 +1303,7 @@ go build ./internal/mgmt/
 
 Expected: no errors.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add internal/mgmt/client.go
@@ -1318,7 +1318,7 @@ git commit -m "feat(mgmt): add client helper for management socket"
 - Create: `pkg/cliwrap/mgmt_api.go`
 - Create: `pkg/cliwrap/mgmt_api_test.go`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `pkg/cliwrap/mgmt_api_test.go`:
 
@@ -1361,7 +1361,7 @@ func TestManager_ListReturnsRegisteredProcesses(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run to confirm it fails**
+- [x] **Step 2: Run to confirm it fails**
 
 Run:
 
@@ -1371,7 +1371,7 @@ go test ./pkg/cliwrap/ -run TestManager_ListReturnsRegisteredProcesses -count=1
 
 Expected: `mgr.List undefined`.
 
-- [ ] **Step 3: Implement the adapter**
+- [x] **Step 3: Implement the adapter**
 
 Create `pkg/cliwrap/mgmt_api.go`:
 
@@ -1429,7 +1429,7 @@ func toListEntry(h *processHandle) mgmt.ListEntry {
 }
 ```
 
-- [ ] **Step 4: Run the test**
+- [x] **Step 4: Run the test**
 
 Run:
 
@@ -1439,7 +1439,7 @@ go test ./pkg/cliwrap/ -run TestManager_ListReturnsRegisteredProcesses -count=1 
 
 Expected: test passes.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add pkg/cliwrap/mgmt_api.go pkg/cliwrap/mgmt_api_test.go
@@ -1453,7 +1453,7 @@ git commit -m "feat(cliwrap): expose List/StatusOf/Stop to mgmt API"
 **Files:**
 - Create: `cmd/cliwrap/main.go`
 
-- [ ] **Step 1: Create the main file**
+- [x] **Step 1: Create the main file**
 
 Create `cmd/cliwrap/main.go`:
 
@@ -1505,7 +1505,7 @@ func main() {
 }
 ```
 
-- [ ] **Step 2: Verify it builds (expects subcommand stubs to be created)**
+- [x] **Step 2: Verify it builds (expects subcommand stubs to be created)**
 
 Run:
 
@@ -1515,7 +1515,7 @@ go build ./cmd/cliwrap
 
 Expected: fails because subcommand functions are not defined.
 
-- [ ] **Step 3: Commit scaffolding so subsequent tasks can fill in commands**
+- [x] **Step 3: Commit scaffolding so subsequent tasks can fill in commands**
 
 At this point the CLI won't compile until Tasks 9–12 create the subcommand files. That's fine — we commit the main stub separately.
 
@@ -1556,7 +1556,7 @@ git commit -m "feat(cli): scaffold cliwrap entry point with subcommand stubs"
 - Create: `cmd/cliwrap/cmd_validate.go`
 - Modify: `cmd/cliwrap/stubs.go` (remove `runCommand` and `validateCommand`)
 
-- [ ] **Step 1: Implement `cliwrap validate`**
+- [x] **Step 1: Implement `cliwrap validate`**
 
 Create `cmd/cliwrap/cmd_validate.go`:
 
@@ -1592,7 +1592,7 @@ func validateCommand(args []string) int {
 }
 ```
 
-- [ ] **Step 2: Implement `cliwrap run`**
+- [x] **Step 2: Implement `cliwrap run`**
 
 Create `cmd/cliwrap/cmd_run.go`:
 
@@ -1713,7 +1713,7 @@ func writeRuntimeHint(dir string) {
 }
 ```
 
-- [ ] **Step 3: Remove stubs for run/validate**
+- [x] **Step 3: Remove stubs for run/validate**
 
 Edit `cmd/cliwrap/stubs.go` so it no longer declares these two functions:
 
@@ -1728,7 +1728,7 @@ func logsCommand(args []string) int   { return 0 }
 func eventsCommand(args []string) int { return 0 }
 ```
 
-- [ ] **Step 4: Build the CLI and run `validate` against a sample config**
+- [x] **Step 4: Build the CLI and run `validate` against a sample config**
 
 Run:
 
@@ -1754,7 +1754,7 @@ YAML
 
 Expected: `OK: 1 groups, 1 processes`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add cmd/cliwrap/cmd_run.go cmd/cliwrap/cmd_validate.go cmd/cliwrap/stubs.go
@@ -1771,7 +1771,7 @@ git commit -m "feat(cli): implement cliwrap run and cliwrap validate"
 - Create: `cmd/cliwrap/cmd_stop.go`
 - Modify: `cmd/cliwrap/stubs.go`
 
-- [ ] **Step 1: Implement `cliwrap list`**
+- [x] **Step 1: Implement `cliwrap list`**
 
 Create `cmd/cliwrap/cmd_list.go`:
 
@@ -1843,7 +1843,7 @@ func managerSocketPath(override string) string {
 }
 ```
 
-- [ ] **Step 2: Implement `cliwrap status`**
+- [x] **Step 2: Implement `cliwrap status`**
 
 Create `cmd/cliwrap/cmd_status.go`:
 
@@ -1900,7 +1900,7 @@ func statusCommand(args []string) int {
 }
 ```
 
-- [ ] **Step 3: Implement `cliwrap stop`**
+- [x] **Step 3: Implement `cliwrap stop`**
 
 Create `cmd/cliwrap/cmd_stop.go`:
 
@@ -1956,7 +1956,7 @@ func stopCommand(args []string) int {
 }
 ```
 
-- [ ] **Step 4: Remove the corresponding stubs**
+- [x] **Step 4: Remove the corresponding stubs**
 
 Edit `cmd/cliwrap/stubs.go`:
 
@@ -1968,7 +1968,7 @@ func logsCommand(args []string) int   { return 0 }
 func eventsCommand(args []string) int { return 0 }
 ```
 
-- [ ] **Step 5: Build and commit**
+- [x] **Step 5: Build and commit**
 
 Run:
 
@@ -1989,7 +1989,7 @@ git commit -m "feat(cli): implement list, status, and stop subcommands"
 
 These commands remain skeletons because the server-side streaming is a Plan 05 concern. For v1, they print a friendly notice so the CLI surface is complete.
 
-- [ ] **Step 1: Create logs command**
+- [x] **Step 1: Create logs command**
 
 Create `cmd/cliwrap/cmd_logs.go`:
 
@@ -2004,7 +2004,7 @@ func logsCommand(args []string) int {
 }
 ```
 
-- [ ] **Step 2: Create events command**
+- [x] **Step 2: Create events command**
 
 Create `cmd/cliwrap/cmd_events.go`:
 
@@ -2019,7 +2019,7 @@ func eventsCommand(args []string) int {
 }
 ```
 
-- [ ] **Step 3: Delete `cmd/cliwrap/stubs.go`**
+- [x] **Step 3: Delete `cmd/cliwrap/stubs.go`**
 
 Run:
 
@@ -2027,7 +2027,7 @@ Run:
 rm cmd/cliwrap/stubs.go
 ```
 
-- [ ] **Step 4: Build**
+- [x] **Step 4: Build**
 
 Run:
 
@@ -2037,7 +2037,7 @@ go build ./cmd/cliwrap
 
 Expected: clean build.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add cmd/cliwrap/cmd_logs.go cmd/cliwrap/cmd_events.go
