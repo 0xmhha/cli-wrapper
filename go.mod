@@ -2,6 +2,8 @@ module github.com/0xmhha/cli-wrapper
 
 go 1.22
 
+toolchain go1.22.12
+
 require (
 	github.com/stretchr/testify v1.9.0
 	github.com/vmihailenco/msgpack/v5 v5.4.1
