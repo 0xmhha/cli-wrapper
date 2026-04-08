@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/cli-wrapper/cli-wrapper/internal/controller"
+	"github.com/cli-wrapper/cli-wrapper/internal/eventbus"
 	"github.com/cli-wrapper/cli-wrapper/internal/supervise"
 )
 
@@ -18,11 +19,22 @@ type Manager struct {
 	mu      sync.Mutex
 	handles map[string]*processHandle
 	closed  bool
+
+	// Plan 05 additions
+	watcherOnce sync.Once
+	watchStop   chan struct{}
+	watchWG     sync.WaitGroup
+
+	busOnce sync.Once
+	bus     *eventbus.Bus
 }
 
 // NewManager constructs a Manager with the given options.
 func NewManager(opts ...ManagerOption) (*Manager, error) {
-	m := &Manager{handles: map[string]*processHandle{}}
+	m := &Manager{
+		handles:   map[string]*processHandle{},
+		watchStop: make(chan struct{}),
+	}
 	for _, opt := range opts {
 		opt(m)
 	}
@@ -54,6 +66,7 @@ func (m *Manager) Register(spec Spec) (ProcessHandle, error) {
 	}
 	h := &processHandle{spec: spec, mgr: m}
 	m.handles[spec.ID] = h
+	m.startWatcherOnce()
 	return h, nil
 }
 
@@ -71,11 +84,25 @@ func (m *Manager) Shutdown(ctx context.Context) error {
 	}
 	m.mu.Unlock()
 
+	// Stop the watcher loop (but do not wait yet; the watcher may be
+	// mid-iteration and must finish its current pass before we close
+	// handles).
+	select {
+	case <-m.watchStop:
+	default:
+		close(m.watchStop)
+	}
+
 	for _, h := range handles {
 		_ = h.Stop(ctx)
 	}
 	for _, h := range handles {
 		_ = h.Close(ctx)
+	}
+
+	m.watchWG.Wait()
+	if m.bus != nil {
+		m.bus.Close()
 	}
 	return nil
 }

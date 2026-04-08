@@ -50,6 +50,14 @@ func (baseEvent) sealed()                {}
 
 // --- Process lifecycle events ---
 
+type ProcessStartingEvent struct{ baseEvent }
+
+func (ProcessStartingEvent) EventType() Type { return TypeProcessStarting }
+
+func NewProcessStarting(id string, at time.Time) ProcessStartingEvent {
+	return ProcessStartingEvent{baseEvent: baseEvent{id, at}}
+}
+
 type ProcessStartedEvent struct {
 	baseEvent
 	AgentPID int

@@ -650,7 +650,7 @@ git commit -m "feat(supervise): add restart loop honoring policy and max attempt
 - Create: `pkg/cliwrap/manager_events.go`
 - Create: `pkg/cliwrap/manager_events_test.go`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `pkg/cliwrap/manager_events_test.go`:
 
@@ -711,7 +711,7 @@ func TestManager_EmitsLifecycleEvents(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run to confirm it fails**
+- [x] **Step 2: Run to confirm it fails**
 
 Run:
 
@@ -721,7 +721,7 @@ go test ./pkg/cliwrap/ -run TestManager_EmitsLifecycleEvents -count=1
 
 Expected: `mgr.Events undefined`.
 
-- [ ] **Step 2b: Add ProcessStartingEvent to pkg/event**
+- [x] **Step 2b: Add ProcessStartingEvent to pkg/event**
 
 The `publishTransition` helper needs distinct event types for `StateStarting` and
 `StateRunning` to avoid emitting double `ProcessStarted` events. Add the following
@@ -739,7 +739,7 @@ func NewProcessStarting(id string, at time.Time) ProcessStartingEvent {
 }
 ```
 
-- [ ] **Step 3: Implement Events on Manager**
+- [x] **Step 3: Implement Events on Manager**
 
 Create `pkg/cliwrap/manager_events.go`:
 
@@ -870,7 +870,7 @@ And `Shutdown` to close the watcher and wait for it to exit:
 	}
 ```
 
-- [ ] **Step 4: Run the test**
+- [x] **Step 4: Run the test**
 
 Run:
 
@@ -880,7 +880,7 @@ go test ./pkg/cliwrap/ -run TestManager_EmitsLifecycleEvents -count=1 -race -v
 
 Expected: events observed, no leaks.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add pkg/cliwrap/manager_events.go pkg/cliwrap/manager_events_test.go pkg/cliwrap/manager.go
