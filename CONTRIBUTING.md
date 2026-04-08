@@ -305,11 +305,19 @@ usually preferred over new core surface area.
 ## License of Contributions
 
 By contributing to cli-wrapper, you agree that your contributions will be
-licensed under the **GNU Lesser General Public License v2.1 or later
-(LGPL-2.1-or-later)**, the same license that covers the project. See
-[`LICENSE`](./LICENSE) for the full text.
+licensed under the **Apache License, Version 2.0**, the same license that
+covers the project. See [`LICENSE`](./LICENSE) for the full text and
+[`NOTICE`](./NOTICE) for attribution.
 
-Your DCO sign-off certifies that you have the right to do so.
+Apache-2.0 includes an explicit patent grant: by contributing code, you
+grant downstream users a perpetual, worldwide, royalty-free patent license
+covering any patent claims you own that are necessarily infringed by your
+contribution. This is an important protection for everyone using the
+project — please make sure you have the right to grant it before opening
+a PR.
+
+Your DCO sign-off certifies that you have the right to contribute under
+this license.
 
 ---
 

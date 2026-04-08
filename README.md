@@ -5,7 +5,7 @@
 [![CI](https://github.com/0xmhha/cli-wrapper/actions/workflows/ci.yml/badge.svg)](https://github.com/0xmhha/cli-wrapper/actions/workflows/ci.yml)
 [![Go Reference](https://pkg.go.dev/badge/github.com/0xmhha/cli-wrapper.svg)](https://pkg.go.dev/github.com/0xmhha/cli-wrapper)
 [![Go Report Card](https://goreportcard.com/badge/github.com/0xmhha/cli-wrapper)](https://goreportcard.com/report/github.com/0xmhha/cli-wrapper)
-[![License: LGPL v2.1](https://img.shields.io/badge/License-LGPL_v2.1-blue.svg)](./LICENSE)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
 [![Go Version](https://img.shields.io/badge/go-%3E%3D1.22-00ADD8.svg)](https://go.dev/dl/)
 [![Platforms](https://img.shields.io/badge/platforms-linux%20%7C%20macOS-lightgrey.svg)](#requirements)
 
@@ -321,20 +321,25 @@ See [`SECURITY.md`](./SECURITY.md) for the coordinated disclosure process.
 
 ## License
 
-`cli-wrapper` is licensed under the **GNU Lesser General Public License v2.1 or later
-(LGPL-2.1-or-later)**. See [`LICENSE`](./LICENSE) for the full text.
+`cli-wrapper` is licensed under the **Apache License, Version 2.0**.
+See [`LICENSE`](./LICENSE) for the full text and [`NOTICE`](./NOTICE) for
+attribution requirements.
 
 ```
-SPDX-License-Identifier: LGPL-2.1-or-later
+SPDX-License-Identifier: Apache-2.0
 ```
 
-In short: you may use, modify, and redistribute this library, including as part
-of a larger proprietary application, provided that:
+In short: you may use, modify, and redistribute this library — including
+inside proprietary applications — provided that you:
 
-- Modifications to **cli-wrapper itself** are released under the LGPL
-- Users of your application can relink it against a modified version of cli-wrapper
+- Preserve the copyright notice and the `LICENSE` and `NOTICE` files
+- State any significant changes you make to the source
+- Do not use the project's name, trademarks, or contributors' names to
+  endorse derived products without permission
 
-If LGPL is incompatible with your use case, please open a discussion issue.
+The Apache-2.0 license includes an explicit patent grant from contributors,
+giving downstream users protection against patent claims on the code they
+contributed.
 
 ## Acknowledgements
 
