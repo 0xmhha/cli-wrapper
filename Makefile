@@ -32,3 +32,19 @@ fixtures:
 	$(GO) build -o test/fixtures/bin/fixture-noisy  ./test/fixtures/noisy
 	$(GO) build -o test/fixtures/bin/fixture-crasher ./test/fixtures/crasher
 	$(GO) build -o test/fixtures/bin/fixture-hanger ./test/fixtures/hanger
+
+.PHONY: bench
+bench:
+	$(GO) test -run=^$$ -bench=. -benchtime=2s ./test/bench/...
+
+.PHONY: integration
+integration: fixtures
+	$(GO) test -count=1 -race -v ./test/integration/...
+
+.PHONY: chaos
+chaos:
+	$(GO) test -count=1 -race -v ./test/chaos/...
+
+.PHONY: fuzz-short
+fuzz-short:
+	$(GO) test -run=^$$ -fuzz=FuzzFrameReader -fuzztime=30s ./internal/ipc/...
