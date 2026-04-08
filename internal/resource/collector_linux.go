@@ -84,7 +84,7 @@ func (linuxSystemCollector) Collect() (SystemSample, error) {
 	if err != nil {
 		return s, fmt.Errorf("resource: open meminfo: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		line := scanner.Text()
