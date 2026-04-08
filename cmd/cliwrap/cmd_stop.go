@@ -26,7 +26,7 @@ func stopCommand(args []string) int {
 		fmt.Fprintf(os.Stderr, "cliwrap stop: %v\n", err)
 		return 1
 	}
-	defer cli.Close()
+	defer func() { _ = cli.Close() }()
 
 	rc := 0
 	for _, id := range fs.Args() {

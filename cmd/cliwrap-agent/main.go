@@ -11,12 +11,15 @@ import (
 )
 
 func main() {
-	ctx, cancel := signal.NotifyContext(context.Background(),
-		syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
-	defer cancel()
-
-	if err := agent.Run(ctx, agent.DefaultConfig()); err != nil {
+	if err := run(); err != nil {
 		fmt.Fprintf(os.Stderr, "cliwrap-agent: %v\n", err)
 		os.Exit(1)
 	}
+}
+
+func run() error {
+	ctx, cancel := signal.NotifyContext(context.Background(),
+		syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
+	defer cancel()
+	return agent.Run(ctx, agent.DefaultConfig())
 }

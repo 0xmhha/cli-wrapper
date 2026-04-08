@@ -10,6 +10,11 @@ import (
 // Events returns the Manager's event bus. Subscribers receive lifecycle,
 // log, and reliability events. The bus is lazily created on first call.
 func (m *Manager) Events() event.Bus {
+	return m.ensureBus()
+}
+
+// ensureBus lazily initializes and returns the concrete event bus.
+func (m *Manager) ensureBus() *eventbus.Bus {
 	m.busOnce.Do(func() {
 		m.bus = eventbus.New(256)
 	})
@@ -18,7 +23,7 @@ func (m *Manager) Events() event.Bus {
 
 // emit is a helper for controllers to publish events.
 func (m *Manager) emit(e event.Event) {
-	m.Events().(*eventbus.Bus).Publish(e)
+	m.ensureBus().Publish(e)
 }
 
 // startWatcherOnce launches the state-watcher goroutine.

@@ -75,7 +75,7 @@ func Run(ctx context.Context, cfg Config) error {
 	conn.Start()
 
 	// Send initial HELLO.
-	helloPayload := ipc.HelloPayload{ProtocolVersion: uint8(ipc.ProtocolVersion), AgentID: cfg.AgentID}
+	helloPayload := ipc.HelloPayload{ProtocolVersion: ipc.ProtocolVersion, AgentID: cfg.AgentID}
 	if err := d.SendControl(ipc.MsgHello, helloPayload, false); err != nil {
 		return fmt.Errorf("agent: send hello: %w", err)
 	}

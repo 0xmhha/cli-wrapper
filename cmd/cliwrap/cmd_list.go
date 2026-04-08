@@ -25,7 +25,7 @@ func listCommand(args []string) int {
 		fmt.Fprintf(os.Stderr, "cliwrap list: %v\n", err)
 		return 1
 	}
-	defer cli.Close()
+	defer func() { _ = cli.Close() }()
 
 	_, body, err := cli.Call(mgmt.MsgListRequest, nil)
 	if err != nil {

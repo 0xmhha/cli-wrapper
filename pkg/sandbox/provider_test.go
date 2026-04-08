@@ -11,8 +11,7 @@ import (
 )
 
 type fakeInstance struct {
-	id  string
-	cmd *exec.Cmd
+	id string
 }
 
 func (f *fakeInstance) ID() string { return f.id }

@@ -54,7 +54,7 @@ func (p *Provider) Prepare(ctx context.Context, spec cwtypes.SandboxSpec, script
 			return nil, err
 		}
 		if s.InnerPath == "/cliwrap/entrypoint.sh" {
-			entrypoint = filepath.Join(dir, "cliwrap/entrypoint.sh")
+			entrypoint = filepath.Join(dir, "cliwrap", "entrypoint.sh")
 		}
 	}
 	if entrypoint == "" {

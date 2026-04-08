@@ -80,7 +80,7 @@ func (s *Server) acceptLoop() {
 
 func (s *Server) handleConn(conn net.Conn) {
 	defer s.wg.Done()
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	reader := ipc.NewFrameReader(conn, ipc.MaxPayloadSize)
 	writer := ipc.NewFrameWriter(conn)

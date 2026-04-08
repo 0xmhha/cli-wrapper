@@ -28,7 +28,7 @@ func NewDispatcher(conn *ipc.Conn) *Dispatcher {
 func (d *Dispatcher) Handle(msg ipc.OutboxMessage) {
 	switch msg.Header.MsgType {
 	case ipc.MsgHello:
-		_ = d.SendControl(ipc.MsgHelloAck, ipc.HelloAckPayload{ProtocolVersion: uint8(ipc.ProtocolVersion)}, false)
+		_ = d.SendControl(ipc.MsgHelloAck, ipc.HelloAckPayload{ProtocolVersion: ipc.ProtocolVersion}, false)
 	case ipc.MsgStartChild:
 		var p ipc.StartChildPayload
 		if err := ipc.DecodePayload(msg.Payload, &p); err != nil {
@@ -95,7 +95,12 @@ func (d *Dispatcher) startChild(p ipc.StartChildPayload) {
 	}()
 }
 
-func (d *Dispatcher) stopChild(timeout time.Duration) {
+// stopChild cancels the running child and waits for the runner goroutine to
+// exit. The timeout parameter is part of the wire protocol but is enforced
+// inside Runner via RunSpec.StopTimeout, not here: cancel() triggers the
+// SIGTERM→SIGKILL escalation, after which Runner.Run returns and wg.Done()
+// fires. wg.Wait() is therefore bounded by StopTimeout.
+func (d *Dispatcher) stopChild(_ time.Duration) {
 	d.mu.Lock()
 	cancel := d.cancelFn
 	d.mu.Unlock()
@@ -103,12 +108,6 @@ func (d *Dispatcher) stopChild(timeout time.Duration) {
 		return
 	}
 	cancel()
-	if timeout <= 0 {
-		timeout = 5 * time.Second
-	}
-	// cancel() triggers Runner's SIGTERM->SIGKILL escalation inside the
-	// RunSpec.StopTimeout window. After that, Runner.Run returns and
-	// wg.Done() fires. So wg.Wait() is bounded by StopTimeout.
 	d.wg.Wait()
 }
 

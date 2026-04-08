@@ -26,7 +26,7 @@ func statusCommand(args []string) int {
 		fmt.Fprintf(os.Stderr, "cliwrap status: %v\n", err)
 		return 1
 	}
-	defer cli.Close()
+	defer func() { _ = cli.Close() }()
 
 	_, body, err := cli.Call(mgmt.MsgStatusRequest, mgmt.StatusRequestPayload{ID: fs.Arg(0)})
 	if err != nil {

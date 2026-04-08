@@ -90,7 +90,7 @@ func (c *Controller) Start(ctx context.Context) error {
 	conn.Start()
 
 	// Send HELLO to prompt agent's HELLO_ACK.
-	_ = c.send(ipc.MsgHello, ipc.HelloPayload{ProtocolVersion: uint8(ipc.ProtocolVersion), AgentID: c.opts.Spec.ID}, false)
+	_ = c.send(ipc.MsgHello, ipc.HelloPayload{ProtocolVersion: ipc.ProtocolVersion, AgentID: c.opts.Spec.ID}, false)
 	_ = c.send(ipc.MsgStartChild, ipc.StartChildPayload{
 		Command:     c.opts.Spec.Command,
 		Args:        c.opts.Spec.Args,

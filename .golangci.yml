@@ -1,0 +1,109 @@
+# golangci-lint configuration for cli-wrapper.
+# https://golangci-lint.run/usage/configuration/
+#
+# Run locally with:  golangci-lint run
+# CI runs the same command via .github/workflows/lint.yml.
+
+run:
+  timeout: 5m
+  tests: true
+  go: "1.22"
+
+linters:
+  # Start from a clean slate; only enable what we explicitly want.
+  disable-all: true
+  enable:
+    # Default set (matches `golangci-lint help linters` defaults).
+    - errcheck       # unchecked errors
+    - gosimple       # code simplifications
+    - govet          # vet checks
+    - ineffassign    # unused assignments
+    - staticcheck    # static analysis (SA*)
+    - unused         # unused code
+    # Style and correctness.
+    - gofmt          # gofmt formatting
+    - goimports      # import grouping
+    - misspell       # misspellings
+    - unconvert      # redundant type conversions
+    - bodyclose      # response body close
+    - errorlint      # error wrapping correctness
+    - nilerr         # return nil after non-nil error
+    - prealloc       # preallocation hints
+    - copyloopvar    # loop variable capture (Go 1.22+)
+    - gocritic       # opinionated checks
+    - revive         # golint successor
+
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+    check-blank: false
+    exclude-functions:
+      - (io.Closer).Close
+      - (io.ReadCloser).Close
+      - (io.WriteCloser).Close
+      - fmt.Fprintf
+      - fmt.Fprintln
+      - fmt.Fprint
+
+  goimports:
+    local-prefixes: github.com/0xmhha/cli-wrapper
+
+  gocritic:
+    disabled-checks:
+      - ifElseChain     # not always a smell in Go
+      - hugeParam       # too noisy for our value-type structs
+      - rangeValCopy    # Spec is by-value by design; perf hint not material
+    enabled-tags:
+      - diagnostic
+      - performance
+      - style
+
+  revive:
+    severity: warning
+    rules:
+      # Note: `exported` (require godoc on exported identifiers) is intentionally
+      # omitted. It is a documentation-hygiene rule we plan to enable
+      # incrementally as we backfill comments. Re-enable when the codebase is
+      # ready to enforce it.
+      - name: var-naming
+      - name: errorf
+      - name: error-return
+      - name: error-naming
+      - name: if-return
+      - name: increment-decrement
+      - name: range
+      - name: receiver-naming
+      - name: time-naming
+      - name: unexported-return
+      - name: indent-error-flow
+      - name: unreachable-code
+      - name: redefines-builtin-id
+
+  staticcheck:
+    checks: ["all"]
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  exclude-use-default: false
+
+  exclude-rules:
+    # Test files: relax a few rules that are noisy and low-value in tests.
+    - path: _test\.go
+      linters:
+        - errcheck
+        - gocritic
+        - prealloc
+
+    # Generated code, fixtures, and benchmarks: skip entirely.
+    - path: test/fixtures/
+      linters:
+        - errcheck
+        - gocritic
+        - revive
+
+    # main packages can use os.Exit and skip exported-comment requirements.
+    - path: cmd/
+      linters:
+        - revive
+      text: "exported"

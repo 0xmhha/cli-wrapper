@@ -47,11 +47,11 @@ func (a *AckTracker) Pending() []uint64 {
 func (a *AckTracker) MaxPendingSeq() uint64 {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	var max uint64
+	var maxSeq uint64
 	for s := range a.pending {
-		if s > max {
-			max = s
+		if s > maxSeq {
+			maxSeq = s
 		}
 	}
-	return max
+	return maxSeq
 }

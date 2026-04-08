@@ -62,7 +62,6 @@ func TestIntegration_BulkShutdown(t *testing.T) {
 	// prevents racing Shutdown against still-spawning agents and gives the
 	// test stable observability semantics.
 	for _, h := range handles {
-		h := h
 		require.Eventually(t, func() bool {
 			return h.Status().State == cliwrap.StateRunning
 		}, 5*time.Second, 20*time.Millisecond,

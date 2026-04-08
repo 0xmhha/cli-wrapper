@@ -161,12 +161,12 @@ type BackpressureStallEvent struct {
 
 func (BackpressureStallEvent) EventType() Type { return TypeBackpressureStall }
 
-func NewBackpressureStall(id string, at time.Time, endpoint string, size, max uint64, dropped int) BackpressureStallEvent {
+func NewBackpressureStall(id string, at time.Time, endpoint string, size, sizeMax uint64, dropped int) BackpressureStallEvent {
 	return BackpressureStallEvent{
 		baseEvent:   baseEvent{id, at},
 		Endpoint:    endpoint,
 		WALSize:     size,
-		WALSizeMax:  max,
+		WALSizeMax:  sizeMax,
 		DroppedMsgs: dropped,
 	}
 }
