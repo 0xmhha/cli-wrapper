@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"sync/atomic"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/cwtypes"
-	"github.com/cli-wrapper/cli-wrapper/pkg/sandbox"
+	"github.com/0xmhha/cli-wrapper/internal/cwtypes"
+	"github.com/0xmhha/cli-wrapper/pkg/sandbox"
 )
 
 // Provider is the no-op provider. It performs no isolation and exists only

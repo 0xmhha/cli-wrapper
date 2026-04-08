@@ -3,7 +3,7 @@ package cliwrap
 import (
 	"context"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/mgmt"
+	"github.com/0xmhha/cli-wrapper/internal/mgmt"
 )
 
 // List returns a snapshot of every registered process for the mgmt API.

@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/cli-wrapper/cli-wrapper/pkg/cliwrap"
+	"github.com/0xmhha/cli-wrapper/pkg/cliwrap"
 )
 
 func writeTempFile(t *testing.T, name, content string) string {

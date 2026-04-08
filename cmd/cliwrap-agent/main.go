@@ -7,7 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/agent"
+	"github.com/0xmhha/cli-wrapper/internal/agent"
 )
 
 func main() {

@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
 
-	"github.com/cli-wrapper/cli-wrapper/pkg/event"
+	"github.com/0xmhha/cli-wrapper/pkg/event"
 )
 
 func TestBus_PublishAndReceive(t *testing.T) {

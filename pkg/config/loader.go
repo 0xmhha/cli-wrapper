@@ -7,7 +7,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/cli-wrapper/cli-wrapper/pkg/cliwrap"
+	"github.com/0xmhha/cli-wrapper/pkg/cliwrap"
 )
 
 // LoadFile reads and parses a YAML config at path.

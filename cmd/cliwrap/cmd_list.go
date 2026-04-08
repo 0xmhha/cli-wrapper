@@ -8,8 +8,8 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/ipc"
-	"github.com/cli-wrapper/cli-wrapper/internal/mgmt"
+	"github.com/0xmhha/cli-wrapper/internal/ipc"
+	"github.com/0xmhha/cli-wrapper/internal/mgmt"
 )
 
 func listCommand(args []string) int {

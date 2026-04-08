@@ -665,8 +665,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/supervise"
-	"github.com/cli-wrapper/cli-wrapper/pkg/event"
+	"github.com/0xmhha/cli-wrapper/internal/supervise"
+	"github.com/0xmhha/cli-wrapper/pkg/event"
 )
 
 func TestManager_EmitsLifecycleEvents(t *testing.T) {
@@ -749,8 +749,8 @@ package cliwrap
 import (
 	"time"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/eventbus"
-	"github.com/cli-wrapper/cli-wrapper/pkg/event"
+	"github.com/0xmhha/cli-wrapper/internal/eventbus"
+	"github.com/0xmhha/cli-wrapper/pkg/event"
 )
 
 // Events returns the Manager's event bus. Subscribers receive lifecycle,
@@ -910,8 +910,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/supervise"
-	"github.com/cli-wrapper/cli-wrapper/pkg/cliwrap"
+	"github.com/0xmhha/cli-wrapper/internal/supervise"
+	"github.com/0xmhha/cli-wrapper/pkg/cliwrap"
 )
 
 // Note: Manager-driven restart is NOT yet wired in Plan 02. This test verifies
@@ -1004,7 +1004,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/ipc"
+	"github.com/0xmhha/cli-wrapper/internal/ipc"
 )
 
 // This test exercises the Plan 01 Conn reconnect path by forcibly closing
@@ -1151,8 +1151,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/eventbus"
-	"github.com/cli-wrapper/cli-wrapper/pkg/event"
+	"github.com/0xmhha/cli-wrapper/internal/eventbus"
+	"github.com/0xmhha/cli-wrapper/pkg/event"
 )
 
 func TestChaos_SlowSubscriberIsDisconnected(t *testing.T) {
@@ -1220,7 +1220,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/ipc"
+	"github.com/0xmhha/cli-wrapper/internal/ipc"
 )
 
 func BenchmarkIPC_PingPong(b *testing.B) {

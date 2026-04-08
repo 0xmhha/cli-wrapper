@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/cwtypes"
+	"github.com/0xmhha/cli-wrapper/internal/cwtypes"
 )
 
 func TestNoop_Lifecycle(t *testing.T) {

@@ -380,7 +380,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/cli-wrapper/cli-wrapper/pkg/cliwrap"
+	"github.com/0xmhha/cli-wrapper/pkg/cliwrap"
 )
 
 func writeTempFile(t *testing.T, name, content string) string {
@@ -479,7 +479,7 @@ Create `pkg/config/config.go`:
 package config
 
 import (
-	"github.com/cli-wrapper/cli-wrapper/pkg/cliwrap"
+	"github.com/0xmhha/cli-wrapper/pkg/cliwrap"
 )
 
 // Config is the canonical in-memory representation of a loaded YAML file.
@@ -524,7 +524,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/cli-wrapper/cli-wrapper/pkg/cliwrap"
+	"github.com/0xmhha/cli-wrapper/pkg/cliwrap"
 )
 
 // LoadFile reads and parses a YAML config at path.
@@ -794,7 +794,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/ipc"
+	"github.com/0xmhha/cli-wrapper/internal/ipc"
 )
 
 func TestProto_MessageTypesAreUnique(t *testing.T) {
@@ -846,7 +846,7 @@ Create `internal/mgmt/proto.go`:
 // management CLI and a running Manager.
 package mgmt
 
-import "github.com/cli-wrapper/cli-wrapper/internal/ipc"
+import "github.com/0xmhha/cli-wrapper/internal/ipc"
 
 // Management-specific message types. They reuse the ipc framing layer but
 // use distinct numeric IDs in the 0xA0..0xAF range.
@@ -966,7 +966,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/ipc"
+	"github.com/0xmhha/cli-wrapper/internal/ipc"
 )
 
 type fakeManager struct{}
@@ -1052,7 +1052,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/ipc"
+	"github.com/0xmhha/cli-wrapper/internal/ipc"
 )
 
 // ManagerAPI is the subset of Manager functionality the server exposes.
@@ -1242,7 +1242,7 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/ipc"
+	"github.com/0xmhha/cli-wrapper/internal/ipc"
 )
 
 // Client is a synchronous client for the management socket. It is not
@@ -1332,8 +1332,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/mgmt"
-	"github.com/cli-wrapper/cli-wrapper/internal/supervise"
+	"github.com/0xmhha/cli-wrapper/internal/mgmt"
+	"github.com/0xmhha/cli-wrapper/internal/supervise"
 )
 
 func TestManager_ListReturnsRegisteredProcesses(t *testing.T) {
@@ -1381,7 +1381,7 @@ package cliwrap
 import (
 	"context"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/mgmt"
+	"github.com/0xmhha/cli-wrapper/internal/mgmt"
 )
 
 // List returns a snapshot of every registered process for the mgmt API.
@@ -1568,7 +1568,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/cli-wrapper/cli-wrapper/pkg/config"
+	"github.com/0xmhha/cli-wrapper/pkg/config"
 )
 
 func validateCommand(args []string) int {
@@ -1609,9 +1609,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/mgmt"
-	"github.com/cli-wrapper/cli-wrapper/pkg/cliwrap"
-	"github.com/cli-wrapper/cli-wrapper/pkg/config"
+	"github.com/0xmhha/cli-wrapper/internal/mgmt"
+	"github.com/0xmhha/cli-wrapper/pkg/cliwrap"
+	"github.com/0xmhha/cli-wrapper/pkg/config"
 )
 
 func runCommand(args []string) int {
@@ -1786,8 +1786,8 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/ipc"
-	"github.com/cli-wrapper/cli-wrapper/internal/mgmt"
+	"github.com/0xmhha/cli-wrapper/internal/ipc"
+	"github.com/0xmhha/cli-wrapper/internal/mgmt"
 )
 
 func listCommand(args []string) int {
@@ -1855,8 +1855,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/ipc"
-	"github.com/cli-wrapper/cli-wrapper/internal/mgmt"
+	"github.com/0xmhha/cli-wrapper/internal/ipc"
+	"github.com/0xmhha/cli-wrapper/internal/mgmt"
 )
 
 func statusCommand(args []string) int {
@@ -1912,8 +1912,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/ipc"
-	"github.com/cli-wrapper/cli-wrapper/internal/mgmt"
+	"github.com/0xmhha/cli-wrapper/internal/ipc"
+	"github.com/0xmhha/cli-wrapper/internal/mgmt"
 )
 
 func stopCommand(args []string) int {

@@ -6,8 +6,8 @@ import (
 
 	"go.uber.org/goleak"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/eventbus"
-	"github.com/cli-wrapper/cli-wrapper/pkg/event"
+	"github.com/0xmhha/cli-wrapper/internal/eventbus"
+	"github.com/0xmhha/cli-wrapper/pkg/event"
 )
 
 func TestChaos_SlowSubscriberIsDisconnected(t *testing.T) {

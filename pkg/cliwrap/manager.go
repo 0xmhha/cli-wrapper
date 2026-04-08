@@ -5,9 +5,9 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/controller"
-	"github.com/cli-wrapper/cli-wrapper/internal/eventbus"
-	"github.com/cli-wrapper/cli-wrapper/internal/supervise"
+	"github.com/0xmhha/cli-wrapper/internal/controller"
+	"github.com/0xmhha/cli-wrapper/internal/eventbus"
+	"github.com/0xmhha/cli-wrapper/internal/supervise"
 )
 
 // Manager is the top-level library entry point.

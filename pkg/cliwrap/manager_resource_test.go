@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/supervise"
+	"github.com/0xmhha/cli-wrapper/internal/supervise"
 )
 
 func TestManager_ChildPIDs(t *testing.T) {

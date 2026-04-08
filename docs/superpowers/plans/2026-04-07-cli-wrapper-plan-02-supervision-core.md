@@ -14,7 +14,7 @@
 - `golang.org/x/sync/errgroup` for bulk shutdown
 
 **Context for the implementer:**
-- The IPC layer is complete and exported from `github.com/cli-wrapper/cli-wrapper/internal/ipc`.
+- The IPC layer is complete and exported from `github.com/0xmhha/cli-wrapper/internal/ipc`.
 - The spec's single source of truth is `docs/superpowers/specs/2026-04-07-cli-wrapper-design.md`; when anything here is ambiguous, defer to the spec.
 - Strict TDD: failing test first, then implementation.
 - Every long-lived goroutine must honor a `context.Context`; every test must call `goleak.VerifyNone(t)`.
@@ -629,7 +629,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
 
-	"github.com/cli-wrapper/cli-wrapper/pkg/event"
+	"github.com/0xmhha/cli-wrapper/pkg/event"
 )
 
 func TestBus_PublishAndReceive(t *testing.T) {
@@ -726,7 +726,7 @@ package eventbus
 import (
 	"sync"
 
-	"github.com/cli-wrapper/cli-wrapper/pkg/event"
+	"github.com/0xmhha/cli-wrapper/pkg/event"
 )
 
 // SlowPolicy controls how the bus reacts to slow subscribers.
@@ -1901,7 +1901,7 @@ Create `pkg/cliwrap/types.go`:
 package cliwrap
 
 import (
-	"github.com/cli-wrapper/cli-wrapper/internal/cwtypes"
+	"github.com/0xmhha/cli-wrapper/internal/cwtypes"
 )
 
 // Type aliases — these are transparent to callers. Users continue to
@@ -1954,7 +1954,7 @@ package cliwrap
 import (
 	"errors"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/cwtypes"
+	"github.com/0xmhha/cli-wrapper/internal/cwtypes"
 )
 
 // Sentinel errors.
@@ -2524,7 +2524,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/ipc"
+	"github.com/0xmhha/cli-wrapper/internal/ipc"
 )
 
 // Config is the runtime configuration passed from the host via env vars
@@ -2616,7 +2616,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/agent"
+	"github.com/0xmhha/cli-wrapper/internal/agent"
 )
 
 func main() {
@@ -2643,7 +2643,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/ipc"
+	"github.com/0xmhha/cli-wrapper/internal/ipc"
 )
 
 // Dispatcher routes inbound IPC messages and owns outbound message sending.
@@ -2989,7 +2989,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/ipc"
+	"github.com/0xmhha/cli-wrapper/internal/ipc"
 )
 
 func TestDispatcher_HandlesStartChildAndExit(t *testing.T) {
@@ -3074,7 +3074,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/ipc"
+	"github.com/0xmhha/cli-wrapper/internal/ipc"
 )
 
 // Dispatcher routes inbound IPC messages and coordinates child lifecycles.
@@ -3616,8 +3616,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/cwtypes"
-	"github.com/cli-wrapper/cli-wrapper/internal/supervise"
+	"github.com/0xmhha/cli-wrapper/internal/cwtypes"
+	"github.com/0xmhha/cli-wrapper/internal/supervise"
 )
 
 func TestController_StartAgentAndStop(t *testing.T) {
@@ -3725,9 +3725,9 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/cwtypes"
-	"github.com/cli-wrapper/cli-wrapper/internal/ipc"
-	"github.com/cli-wrapper/cli-wrapper/internal/supervise"
+	"github.com/0xmhha/cli-wrapper/internal/cwtypes"
+	"github.com/0xmhha/cli-wrapper/internal/ipc"
+	"github.com/0xmhha/cli-wrapper/internal/supervise"
 )
 
 // ControllerOptions configures a Controller.
@@ -3924,7 +3924,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/supervise"
+	"github.com/0xmhha/cli-wrapper/internal/supervise"
 )
 
 func TestManager_RegisterAndRun(t *testing.T) {
@@ -3999,7 +3999,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/controller"
+	"github.com/0xmhha/cli-wrapper/internal/controller"
 )
 
 // ProcessHandle is the user-facing handle to a managed process.
@@ -4092,8 +4092,8 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/controller"
-	"github.com/cli-wrapper/cli-wrapper/internal/supervise"
+	"github.com/0xmhha/cli-wrapper/internal/controller"
+	"github.com/0xmhha/cli-wrapper/internal/supervise"
 )
 
 // Manager is the top-level library entry point.
@@ -4216,8 +4216,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/supervise"
-	"github.com/cli-wrapper/cli-wrapper/pkg/cliwrap"
+	"github.com/0xmhha/cli-wrapper/internal/supervise"
+	"github.com/0xmhha/cli-wrapper/pkg/cliwrap"
 )
 
 func TestIntegration_CrashDetection(t *testing.T) {
@@ -4332,8 +4332,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/supervise"
-	"github.com/cli-wrapper/cli-wrapper/pkg/cliwrap"
+	"github.com/0xmhha/cli-wrapper/internal/supervise"
+	"github.com/0xmhha/cli-wrapper/pkg/cliwrap"
 )
 
 func TestIntegration_NoLeaksAcrossCycles(t *testing.T) {
@@ -4396,8 +4396,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/supervise"
-	"github.com/cli-wrapper/cli-wrapper/pkg/cliwrap"
+	"github.com/0xmhha/cli-wrapper/internal/supervise"
+	"github.com/0xmhha/cli-wrapper/pkg/cliwrap"
 )
 
 func TestIntegration_NoLeaksAcrossCycles(t *testing.T) {

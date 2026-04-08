@@ -3,8 +3,8 @@ package cliwrap
 import (
 	"time"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/eventbus"
-	"github.com/cli-wrapper/cli-wrapper/pkg/event"
+	"github.com/0xmhha/cli-wrapper/internal/eventbus"
+	"github.com/0xmhha/cli-wrapper/pkg/event"
 )
 
 // Events returns the Manager's event bus. Subscribers receive lifecycle,

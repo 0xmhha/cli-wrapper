@@ -8,8 +8,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/supervise"
-	"github.com/cli-wrapper/cli-wrapper/pkg/event"
+	"github.com/0xmhha/cli-wrapper/internal/supervise"
+	"github.com/0xmhha/cli-wrapper/pkg/event"
 )
 
 func TestManager_EmitsLifecycleEvents(t *testing.T) {

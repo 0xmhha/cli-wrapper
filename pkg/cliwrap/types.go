@@ -3,7 +3,7 @@
 package cliwrap
 
 import (
-	"github.com/cli-wrapper/cli-wrapper/internal/cwtypes"
+	"github.com/0xmhha/cli-wrapper/internal/cwtypes"
 )
 
 // Type aliases — these are transparent to callers. Users continue to

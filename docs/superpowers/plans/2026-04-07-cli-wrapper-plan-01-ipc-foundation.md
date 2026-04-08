@@ -73,17 +73,17 @@ Run:
 
 ```bash
 cd /Users/wm-it-22-00661/Work/github/study/ai/cli-wrapper
-go mod init github.com/cli-wrapper/cli-wrapper
+go mod init github.com/0xmhha/cli-wrapper
 ```
 
-Expected output: `go: creating new go.mod: module github.com/cli-wrapper/cli-wrapper`
+Expected output: `go: creating new go.mod: module github.com/0xmhha/cli-wrapper`
 
 - [ ] **Step 2: Set the Go version in `go.mod`**
 
 Overwrite `go.mod` with exactly:
 
 ```
-module github.com/cli-wrapper/cli-wrapper
+module github.com/0xmhha/cli-wrapper
 
 go 1.22
 ```

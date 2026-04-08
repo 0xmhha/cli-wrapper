@@ -3,7 +3,7 @@ package cliwrap
 import (
 	"errors"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/cwtypes"
+	"github.com/0xmhha/cli-wrapper/internal/cwtypes"
 )
 
 // Sentinel errors.

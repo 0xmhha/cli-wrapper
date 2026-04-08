@@ -3,7 +3,7 @@ package resource
 import (
 	"sync"
 
-	"github.com/cli-wrapper/cli-wrapper/pkg/cliwrap"
+	"github.com/0xmhha/cli-wrapper/pkg/cliwrap"
 )
 
 // Action describes an enforcement decision.

@@ -2,7 +2,7 @@
 // management CLI and a running Manager.
 package mgmt
 
-import "github.com/cli-wrapper/cli-wrapper/internal/ipc"
+import "github.com/0xmhha/cli-wrapper/internal/ipc"
 
 // Management-specific message types. They reuse the ipc framing layer but
 // use distinct numeric IDs in the 0xA0..0xAF range.

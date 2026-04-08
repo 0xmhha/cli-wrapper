@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/ipc"
+	"github.com/0xmhha/cli-wrapper/internal/ipc"
 )
 
 // Client is a synchronous client for the management socket. It is not

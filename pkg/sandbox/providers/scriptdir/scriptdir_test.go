@@ -8,8 +8,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/cwtypes"
-	"github.com/cli-wrapper/cli-wrapper/pkg/sandbox"
+	"github.com/0xmhha/cli-wrapper/internal/cwtypes"
+	"github.com/0xmhha/cli-wrapper/pkg/sandbox"
 )
 
 func TestScriptdir_EndToEnd(t *testing.T) {

@@ -9,7 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/ipc"
+	"github.com/0xmhha/cli-wrapper/internal/ipc"
 )
 
 // Config is the runtime configuration passed from the host via env vars

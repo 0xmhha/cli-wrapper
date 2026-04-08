@@ -7,8 +7,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/mgmt"
-	"github.com/cli-wrapper/cli-wrapper/internal/supervise"
+	"github.com/0xmhha/cli-wrapper/internal/mgmt"
+	"github.com/0xmhha/cli-wrapper/internal/supervise"
 )
 
 func TestManager_ListReturnsRegisteredProcesses(t *testing.T) {

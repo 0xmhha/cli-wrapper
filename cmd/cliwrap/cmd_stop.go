@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/ipc"
-	"github.com/cli-wrapper/cli-wrapper/internal/mgmt"
+	"github.com/0xmhha/cli-wrapper/internal/ipc"
+	"github.com/0xmhha/cli-wrapper/internal/mgmt"
 )
 
 func stopCommand(args []string) int {

@@ -563,7 +563,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/cli-wrapper/cli-wrapper/pkg/cliwrap"
+	"github.com/0xmhha/cli-wrapper/pkg/cliwrap"
 )
 
 func TestEvaluator_EmitsActionAfterSustainedBreach(t *testing.T) {
@@ -640,7 +640,7 @@ package resource
 import (
 	"sync"
 
-	"github.com/cli-wrapper/cli-wrapper/pkg/cliwrap"
+	"github.com/0xmhha/cli-wrapper/pkg/cliwrap"
 )
 
 // Action describes an enforcement decision.
@@ -987,7 +987,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/supervise"
+	"github.com/0xmhha/cli-wrapper/internal/supervise"
 )
 
 func TestManager_ChildPIDs(t *testing.T) {
@@ -1098,7 +1098,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/cwtypes"
+	"github.com/0xmhha/cli-wrapper/internal/cwtypes"
 )
 
 type fakeInstance struct {
@@ -1154,7 +1154,7 @@ import (
 	"context"
 	"os/exec"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/cwtypes"
+	"github.com/0xmhha/cli-wrapper/internal/cwtypes"
 )
 
 // Provider prepares isolated environments in which child CLI processes can run.
@@ -1378,8 +1378,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/cwtypes"
-	"github.com/cli-wrapper/cli-wrapper/pkg/sandbox"
+	"github.com/0xmhha/cli-wrapper/internal/cwtypes"
+	"github.com/0xmhha/cli-wrapper/pkg/sandbox"
 )
 
 func TestNoop_Lifecycle(t *testing.T) {
@@ -1424,8 +1424,8 @@ import (
 	"strconv"
 	"sync/atomic"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/cwtypes"
-	"github.com/cli-wrapper/cli-wrapper/pkg/sandbox"
+	"github.com/0xmhha/cli-wrapper/internal/cwtypes"
+	"github.com/0xmhha/cli-wrapper/pkg/sandbox"
 )
 
 // Provider is the no-op provider. It performs no isolation and exists only
@@ -1509,8 +1509,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/cwtypes"
-	"github.com/cli-wrapper/cli-wrapper/pkg/sandbox"
+	"github.com/0xmhha/cli-wrapper/internal/cwtypes"
+	"github.com/0xmhha/cli-wrapper/pkg/sandbox"
 )
 
 func TestScriptdir_EndToEnd(t *testing.T) {
@@ -1565,8 +1565,8 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/cwtypes"
-	"github.com/cli-wrapper/cli-wrapper/pkg/sandbox"
+	"github.com/0xmhha/cli-wrapper/internal/cwtypes"
+	"github.com/0xmhha/cli-wrapper/pkg/sandbox"
 )
 
 // Options configures a scriptdir.Provider.

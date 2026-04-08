@@ -9,8 +9,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/supervise"
-	"github.com/cli-wrapper/cli-wrapper/pkg/cliwrap"
+	"github.com/0xmhha/cli-wrapper/internal/supervise"
+	"github.com/0xmhha/cli-wrapper/pkg/cliwrap"
 )
 
 // TestIntegration_BulkShutdown registers many long-running processes, starts

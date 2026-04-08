@@ -5,7 +5,7 @@ import (
 	"context"
 	"os/exec"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/cwtypes"
+	"github.com/0xmhha/cli-wrapper/internal/cwtypes"
 )
 
 // Provider prepares isolated environments in which child CLI processes can run.

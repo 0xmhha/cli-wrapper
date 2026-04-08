@@ -12,9 +12,9 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/cwtypes"
-	"github.com/cli-wrapper/cli-wrapper/internal/ipc"
-	"github.com/cli-wrapper/cli-wrapper/internal/supervise"
+	"github.com/0xmhha/cli-wrapper/internal/cwtypes"
+	"github.com/0xmhha/cli-wrapper/internal/ipc"
+	"github.com/0xmhha/cli-wrapper/internal/supervise"
 )
 
 // ControllerOptions configures a Controller.

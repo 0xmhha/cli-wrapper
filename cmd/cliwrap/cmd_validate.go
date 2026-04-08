@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/cli-wrapper/cli-wrapper/pkg/config"
+	"github.com/0xmhha/cli-wrapper/pkg/config"
 )
 
 func validateCommand(args []string) int {

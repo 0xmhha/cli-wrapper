@@ -10,9 +10,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/mgmt"
-	"github.com/cli-wrapper/cli-wrapper/pkg/cliwrap"
-	"github.com/cli-wrapper/cli-wrapper/pkg/config"
+	"github.com/0xmhha/cli-wrapper/internal/mgmt"
+	"github.com/0xmhha/cli-wrapper/pkg/cliwrap"
+	"github.com/0xmhha/cli-wrapper/pkg/config"
 )
 
 func runCommand(args []string) int {

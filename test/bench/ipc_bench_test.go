@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/ipc"
+	"github.com/0xmhha/cli-wrapper/internal/ipc"
 )
 
 func BenchmarkIPC_PingPong(b *testing.B) {

@@ -3,7 +3,7 @@ package eventbus
 import (
 	"sync"
 
-	"github.com/cli-wrapper/cli-wrapper/pkg/event"
+	"github.com/0xmhha/cli-wrapper/pkg/event"
 )
 
 // SlowPolicy controls how the bus reacts to slow subscribers.

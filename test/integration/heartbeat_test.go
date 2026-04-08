@@ -11,8 +11,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/controller"
-	"github.com/cli-wrapper/cli-wrapper/internal/ipc"
+	"github.com/0xmhha/cli-wrapper/internal/controller"
+	"github.com/0xmhha/cli-wrapper/internal/ipc"
 )
 
 func newConnForHeartbeat(rwc net.Conn, dir string) (*ipc.Conn, error) {

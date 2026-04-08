@@ -1,4 +1,4 @@
-module github.com/cli-wrapper/cli-wrapper
+module github.com/0xmhha/cli-wrapper
 
 go 1.22
 

@@ -1,7 +1,7 @@
 package config
 
 import (
-	"github.com/cli-wrapper/cli-wrapper/pkg/cliwrap"
+	"github.com/0xmhha/cli-wrapper/pkg/cliwrap"
 )
 
 // Config is the canonical in-memory representation of a loaded YAML file.

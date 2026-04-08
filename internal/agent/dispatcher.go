@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cli-wrapper/cli-wrapper/internal/ipc"
+	"github.com/0xmhha/cli-wrapper/internal/ipc"
 )
 
 // Dispatcher routes inbound IPC messages and coordinates child lifecycles.
