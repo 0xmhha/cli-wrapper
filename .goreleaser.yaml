@@ -1,0 +1,146 @@
+# GoReleaser configuration for cli-wrapper.
+# Docs: https://goreleaser.com
+#
+# Local check:       goreleaser check
+# Local dry-run:     goreleaser release --snapshot --clean --skip=publish
+# Actual release:    tag & push, GitHub Actions runs `goreleaser release --clean`
+
+version: 2
+
+project_name: cli-wrapper
+
+before:
+  hooks:
+    - go mod tidy
+    - go mod download
+
+builds:
+  - id: cliwrap
+    main: ./cmd/cliwrap
+    binary: cliwrap
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.ShortCommit}}
+      - -X main.date={{.CommitDate}}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+  - id: cliwrap-agent
+    main: ./cmd/cliwrap-agent
+    binary: cliwrap-agent
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+archives:
+  - id: default
+    ids:
+      - cliwrap
+      - cliwrap-agent
+    formats: [tar.gz]
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- .Version }}_
+      {{- .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else }}{{ .Arch }}{{ end }}
+    files:
+      - LICENSE
+      - NOTICE
+      - README.md
+      - CHANGELOG.md
+      - CONTRIBUTING.md
+
+checksum:
+  name_template: "{{ .ProjectName }}_{{ .Version }}_checksums.txt"
+  algorithm: sha256
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  use: git
+  groups:
+    - title: "New features"
+      regexp: '^.*?feat(\(.+\))??!?:.+$'
+      order: 0
+    - title: "Bug fixes"
+      regexp: '^.*?fix(\(.+\))??!?:.+$'
+      order: 1
+    - title: "Performance improvements"
+      regexp: '^.*?perf(\(.+\))??!?:.+$'
+      order: 2
+    - title: "Refactors"
+      regexp: '^.*?refactor(\(.+\))??!?:.+$'
+      order: 3
+    - title: "Documentation"
+      regexp: '^.*?docs(\(.+\))??!?:.+$'
+      order: 4
+    - title: "Other changes"
+      order: 999
+  filters:
+    exclude:
+      - "^test:"
+      - "^chore:"
+      - "^ci:"
+      - "^style:"
+      - "^build:"
+      - "Merge pull request"
+      - "Merge remote-tracking branch"
+      - "Merge branch"
+
+release:
+  github:
+    owner: 0xmhha
+    name: cli-wrapper
+  name_template: "cli-wrapper {{.Tag}}"
+  mode: replace
+  draft: false
+  prerelease: auto
+  header: |
+    ## cli-wrapper {{.Tag}}
+
+    Production-grade Go library and CLI for supervising background
+    CLI processes on macOS and Linux.
+
+    **Install as a library:**
+    ```bash
+    go get github.com/0xmhha/cli-wrapper@{{.Tag}}
+    ```
+
+    **Install the management CLI from source:**
+    ```bash
+    go install github.com/0xmhha/cli-wrapper/cmd/cliwrap@{{.Tag}}
+    go install github.com/0xmhha/cli-wrapper/cmd/cliwrap-agent@{{.Tag}}
+    ```
+
+    **Or download the prebuilt binaries below** — tarballs include
+    both `cliwrap` and `cliwrap-agent` plus LICENSE, NOTICE, and docs.
+    Verify with `sha256sum -c cli-wrapper_{{.Version}}_checksums.txt`.
+  footer: |
+    ---
+
+    **Full changelog:** https://github.com/0xmhha/cli-wrapper/compare/{{ .PreviousTag }}...{{ .Tag }}
+
+    Licensed under [Apache-2.0](https://github.com/0xmhha/cli-wrapper/blob/{{ .Tag }}/LICENSE).

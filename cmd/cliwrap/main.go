@@ -7,6 +7,14 @@ import (
 	"os"
 )
 
+// Build-time version metadata. GoReleaser injects these via -ldflags -X.
+// They default to "dev" values in local go build invocations.
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
+
 func main() {
 	if len(os.Args) < 2 {
 		fmt.Fprintln(os.Stderr, "usage: cliwrap <command> [args...]")
@@ -34,7 +42,7 @@ func main() {
 	case "events":
 		exit = eventsCommand(args)
 	case "version":
-		fmt.Println("cliwrap dev")
+		fmt.Printf("cliwrap %s (commit %s, built %s)\n", version, commit, date)
 		exit = 0
 	case "-h", "--help", "help":
 		fmt.Println("cliwrap: manage background CLI processes")
