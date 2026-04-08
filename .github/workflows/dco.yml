@@ -28,6 +28,19 @@ jobs:
 
           echo "Checking commits in range ${BASE_SHA}..${HEAD_SHA}"
 
+          # Known automation bot authors that we exempt from the DCO check.
+          # These bots produce mechanical commits (dependency bumps, action
+          # version bumps, release automation) where a DCO sign-off is not
+          # meaningful. New entries should be kept conservative and explicit.
+          is_bot_author() {
+            case "$1" in
+              "dependabot[bot]") return 0 ;;
+              "github-actions[bot]") return 0 ;;
+              "renovate[bot]") return 0 ;;
+              *) return 1 ;;
+            esac
+          }
+
           commits=$(git rev-list --no-merges "${BASE_SHA}..${HEAD_SHA}")
           if [ -z "$commits" ]; then
             echo "No non-merge commits to check."
@@ -39,8 +52,13 @@ jobs:
             subject=$(git log -1 --format='%s' "$sha")
             author_name=$(git log -1 --format='%an' "$sha")
             author_email=$(git log -1 --format='%ae' "$sha")
-            signoffs=$(git log -1 --format='%(trailers:key=Signed-off-by,valueonly)' "$sha")
 
+            if is_bot_author "$author_name"; then
+              printf 'Commit %s by bot %s: DCO check skipped.\n' "$sha" "$author_name"
+              continue
+            fi
+
+            signoffs=$(git log -1 --format='%(trailers:key=Signed-off-by,valueonly)' "$sha")
             expected="${author_name} <${author_email}>"
 
             if [ -z "$signoffs" ]; then
