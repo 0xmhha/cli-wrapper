@@ -1,0 +1,72 @@
+name: Feature request
+description: Propose a new feature, enhancement, or API change
+title: "[feat]: "
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for thinking about cli-wrapper's future! Please focus on the
+        **problem** you want to solve, not a specific implementation.
+
+        cli-wrapper aims to stay small and opinionated. Features that can
+        live cleanly as a sandbox provider or external package are usually
+        preferred over growing the core API.
+
+  - type: checkboxes
+    id: prerequisites
+    attributes:
+      label: Prerequisites
+      options:
+        - label: I searched existing issues and this is not a duplicate
+          required: true
+        - label: I have read CONTRIBUTING.md "Requesting Features"
+          required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you trying to solve?
+      description: |
+        Describe the user problem, not the solution. "I can't X" or
+        "When Y happens, I need Z" is more useful than "Add flag --foo".
+    validations:
+      required: true
+
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use case
+      description: "Who benefits? How often does this come up? Is it blocking you?"
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution (optional)
+      description: |
+        If you already have an idea of how this could work, sketch it here.
+        Code snippets, YAML examples, or CLI invocations are welcome.
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: "Other approaches you thought about and why they didn't fit."
+
+  - type: dropdown
+    id: contribution
+    attributes:
+      label: Would you be willing to implement this?
+      options:
+        - "Yes, I'd like to work on it"
+        - "Yes, with mentorship"
+        - "No, just reporting"
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
