@@ -1,0 +1,31 @@
+# EditorConfig — https://editorconfig.org
+# Top-most EditorConfig file for cli-wrapper.
+root = true
+
+# Defaults for every file in the repository.
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+# Go uses tabs by gofmt convention.
+[*.go]
+indent_style = tab
+indent_size = 4
+
+# Makefiles require literal tabs in recipes.
+[{Makefile,*.mk}]
+indent_style = tab
+indent_size = 4
+
+# Markdown allows trailing whitespace for hard line breaks.
+[*.md]
+trim_trailing_whitespace = false
+
+# Go module files (go.mod, go.sum) are tab-indented.
+[{go.mod,go.sum}]
+indent_style = tab
+indent_size = 4
