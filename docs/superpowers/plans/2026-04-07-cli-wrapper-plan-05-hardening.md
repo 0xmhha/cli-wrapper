@@ -45,7 +45,7 @@
 - Create: `internal/controller/heartbeat.go`
 - Create: `internal/controller/heartbeat_test.go`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `internal/controller/heartbeat_test.go`:
 
@@ -158,7 +158,7 @@ func TestHeartbeat_ResetsOnPong(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run to confirm it fails**
+- [x] **Step 2: Run to confirm it fails**
 
 Run:
 
@@ -168,7 +168,7 @@ go test ./internal/controller/ -run TestHeartbeat -count=1
 
 Expected: `undefined: NewHeartbeat`.
 
-- [ ] **Step 3: Implement the heartbeat**
+- [x] **Step 3: Implement the heartbeat**
 
 Create `internal/controller/heartbeat.go`:
 
@@ -276,7 +276,7 @@ func (h *Heartbeat) loop(ctx context.Context) {
 }
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run:
 
@@ -286,7 +286,7 @@ go test ./internal/controller/ -run TestHeartbeat -count=1 -v -race
 
 Expected: three tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add internal/controller/heartbeat.go internal/controller/heartbeat_test.go
@@ -301,7 +301,7 @@ git commit -m "feat(controller): add heartbeat goroutine with miss detection"
 - Create: `internal/controller/crash.go`
 - Create: `internal/controller/crash_test.go`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `internal/controller/crash_test.go`:
 
@@ -341,7 +341,7 @@ func TestCrashInfo_DetectedAtSetOnFirstRecord(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run to confirm it fails**
+- [x] **Step 2: Run to confirm it fails**
 
 Run:
 
@@ -351,7 +351,7 @@ go test ./internal/controller/ -run TestCrashInfo -count=1
 
 Expected: undefined.
 
-- [ ] **Step 3: Implement CrashInfo**
+- [x] **Step 3: Implement CrashInfo**
 
 Create `internal/controller/crash.go`:
 
@@ -421,7 +421,7 @@ func (c *CrashInfo) Record(src CrashSource, data CrashInfo) {
 }
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 Run:
 
@@ -431,7 +431,7 @@ go test ./internal/controller/ -run TestCrashInfo -count=1 -v
 
 Expected: two tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add internal/controller/crash.go internal/controller/crash_test.go
@@ -446,7 +446,7 @@ git commit -m "feat(controller): add unified CrashInfo for 4-layer detection"
 - Create: `internal/supervise/restart_loop.go`
 - Create: `internal/supervise/restart_loop_test.go`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `internal/supervise/restart_loop_test.go`:
 
@@ -524,7 +524,7 @@ func TestRestartLoop_MaxRestartsExhausted(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run to confirm it fails**
+- [x] **Step 2: Run to confirm it fails**
 
 Run:
 
@@ -534,7 +534,7 @@ go test ./internal/supervise/ -run TestRestartLoop -count=1
 
 Expected: undefined.
 
-- [ ] **Step 3: Implement the loop**
+- [x] **Step 3: Implement the loop**
 
 Create `internal/supervise/restart_loop.go`:
 
@@ -625,7 +625,7 @@ func (r *RestartLoop) Run(ctx context.Context) error {
 }
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run:
 
@@ -635,7 +635,7 @@ go test ./internal/supervise/ -run TestRestartLoop -count=1 -v
 
 Expected: three tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add internal/supervise/restart_loop.go internal/supervise/restart_loop_test.go
