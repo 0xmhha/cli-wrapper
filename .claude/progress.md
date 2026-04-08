@@ -24,9 +24,15 @@
   - 16 packages: + pkg/config, internal/mgmt, cmd/cliwrap
   - Key components: ParseByteSize, ExpandEnv, YAML config loader (Spec validation, duplicate ID check), mgmt protocol (10 message types in 0xA0..0xAF), mgmt UDS Server + Client, Manager.List/StatusOf/Stop, cliwrap CLI binary (run/validate/list/status/stop/logs/events/version)
 
-## Current Plan
-- **Plan 05 — Hardening & Reliability**: NOT STARTED
-  - Plan file: `docs/superpowers/plans/2026-04-07-cli-wrapper-plan-05-hardening.md`
+## Completed Plans (continued)
+- **Plan 05 — Hardening & Reliability**: 10/10 tasks DONE
+  - Build: PASS, Vet: PASS, Tests: PASS (race), gofmt clean, goleak clean
+  - 19 packages: + test/bench, test/chaos
+  - Key components: Heartbeat (PING/PONG miss detection), CrashInfo (4-layer unification), RestartLoop (Never/OnFailure/Always policies, ExponentialBackoff), Manager.Events() with state watcher (synthesizes Starting->Started->Stopped lifecycle), restart integration test (3 crash cycles), WAL replay chaos test, slow subscriber chaos test, BenchmarkIPC_PingPong (~1.6 us/op on M2), CI matrix (Linux/macOS x Go 1.22/1.23 + integration/chaos/fuzz jobs), README + CHANGELOG
+
+## Project Status: cli-wrapper v1 COMPLETE
+
+All 5 plans (58 tasks total) implemented per spec. Ready for first tagged release.
 
 ## Commit Rules
 - Open source style, English, concise
