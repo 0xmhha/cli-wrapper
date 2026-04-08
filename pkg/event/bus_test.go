@@ -19,7 +19,7 @@ func (f *fakeBus) Subscribe(filter Filter) Subscription {
 type fakeSub struct{ ch chan Event }
 
 func (f *fakeSub) Events() <-chan Event { return f.ch }
-func (f *fakeSub) Close() error          { close(f.ch); return nil }
+func (f *fakeSub) Close() error         { close(f.ch); return nil }
 
 func TestBusInterface_AcceptsFakeImplementation(t *testing.T) {
 	var b Bus = &fakeBus{}
