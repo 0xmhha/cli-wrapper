@@ -551,7 +551,7 @@ git commit -m "feat(resource): add macOS collectors via sysctl and ps"
 - Create: `internal/resource/evaluator.go`
 - Create: `internal/resource/evaluator_test.go`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `internal/resource/evaluator_test.go`:
 
@@ -620,7 +620,7 @@ func TestEvaluator_CPUNeedsMoreBreaches(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run and confirm it fails**
+- [x] **Step 2: Run and confirm it fails**
 
 Run:
 
@@ -630,7 +630,7 @@ go test ./internal/resource/ -run TestEvaluator -count=1
 
 Expected: undefined.
 
-- [ ] **Step 3: Implement the Evaluator**
+- [x] **Step 3: Implement the Evaluator**
 
 Create `internal/resource/evaluator.go`:
 
@@ -764,7 +764,7 @@ func (e *Evaluator) Evaluate(id string, sample Sample) {
 }
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run:
 
@@ -774,7 +774,7 @@ go test ./internal/resource/ -run TestEvaluator -count=1 -v -race
 
 Expected: three tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add internal/resource/evaluator.go internal/resource/evaluator_test.go
@@ -789,7 +789,7 @@ git commit -m "feat(resource): add Evaluator with sustained-breach detection"
 - Create: `internal/resource/monitor.go`
 - Create: `internal/resource/monitor_test.go`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `internal/resource/monitor_test.go`:
 
@@ -840,7 +840,7 @@ func TestMonitor_PollsAndStops(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run to confirm it fails**
+- [x] **Step 2: Run to confirm it fails**
 
 Run:
 
@@ -850,7 +850,7 @@ go test ./internal/resource/ -run TestMonitor -count=1
 
 Expected: undefined.
 
-- [ ] **Step 3: Implement Monitor**
+- [x] **Step 3: Implement Monitor**
 
 Create `internal/resource/monitor.go`:
 
@@ -946,7 +946,7 @@ func (m *Monitor) tick() {
 }
 ```
 
-- [ ] **Step 4: Run the tests**
+- [x] **Step 4: Run the tests**
 
 Run:
 
@@ -956,7 +956,7 @@ go test ./internal/resource/ -run TestMonitor -count=1 -v -race
 
 Expected: test passes, no goroutine leaks.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add internal/resource/monitor.go internal/resource/monitor_test.go
@@ -972,7 +972,7 @@ git commit -m "feat(resource): add Monitor with ticker-driven sampling"
 - Create: `pkg/cliwrap/manager_resource.go`
 - Create: `pkg/cliwrap/manager_resource_test.go`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `pkg/cliwrap/manager_resource_test.go`:
 
@@ -1025,7 +1025,7 @@ func TestManager_ChildPIDs(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run to confirm it fails**
+- [x] **Step 2: Run to confirm it fails**
 
 Run:
 
@@ -1035,7 +1035,7 @@ go test ./pkg/cliwrap/ -run TestManager_ChildPIDs -count=1
 
 Expected: `mgr.ChildPIDs undefined`.
 
-- [ ] **Step 3: Add `ChildPIDs` to the Manager**
+- [x] **Step 3: Add `ChildPIDs` to the Manager**
 
 Create `pkg/cliwrap/manager_resource.go`:
 
@@ -1059,7 +1059,7 @@ func (m *Manager) ChildPIDs() map[string]int {
 }
 ```
 
-- [ ] **Step 4: Run the test**
+- [x] **Step 4: Run the test**
 
 Run:
 
@@ -1069,7 +1069,7 @@ go test ./pkg/cliwrap/ -run TestManager_ChildPIDs -count=1 -v -race
 
 Expected: test passes.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add pkg/cliwrap/manager_resource.go pkg/cliwrap/manager_resource_test.go
@@ -1084,7 +1084,7 @@ git commit -m "feat(cliwrap): expose ChildPIDs for resource monitor integration"
 - Create: `pkg/sandbox/provider.go`
 - Create: `pkg/sandbox/provider_test.go`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `pkg/sandbox/provider_test.go`:
 
@@ -1132,7 +1132,7 @@ func TestProviderInterface_AcceptsFake(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run and confirm it fails**
+- [x] **Step 2: Run and confirm it fails**
 
 Run:
 
@@ -1142,7 +1142,7 @@ go test ./pkg/sandbox/ -count=1
 
 Expected: undefined.
 
-- [ ] **Step 3: Implement the interface**
+- [x] **Step 3: Implement the interface**
 
 Create `pkg/sandbox/provider.go`:
 
@@ -1182,7 +1182,7 @@ type Instance interface {
 }
 ```
 
-- [ ] **Step 4: Run the test**
+- [x] **Step 4: Run the test**
 
 Run:
 
@@ -1192,7 +1192,7 @@ go test ./pkg/sandbox/ -count=1 -v
 
 Expected: test passes.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add pkg/sandbox/provider.go pkg/sandbox/provider_test.go
@@ -1207,7 +1207,7 @@ git commit -m "feat(sandbox): add Provider and Instance interfaces"
 - Create: `pkg/sandbox/script.go`
 - Create: `pkg/sandbox/script_test.go`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `pkg/sandbox/script_test.go`:
 
@@ -1257,7 +1257,7 @@ func TestWriteInto(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run and confirm it fails**
+- [x] **Step 2: Run and confirm it fails**
 
 Run:
 
@@ -1267,7 +1267,7 @@ go test ./pkg/sandbox/ -run TestNewEntrypointScript -count=1
 
 Expected: undefined.
 
-- [ ] **Step 3: Implement the helpers**
+- [x] **Step 3: Implement the helpers**
 
 Create `pkg/sandbox/script.go`:
 
@@ -1340,7 +1340,7 @@ func shellQuote(s string) string {
 }
 ```
 
-- [ ] **Step 4: Run the tests**
+- [x] **Step 4: Run the tests**
 
 Run:
 
@@ -1350,7 +1350,7 @@ go test ./pkg/sandbox/ -count=1 -v
 
 Expected: all tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add pkg/sandbox/script.go pkg/sandbox/script_test.go
@@ -1365,7 +1365,7 @@ git commit -m "feat(sandbox): add Script type and shell-quoting helpers"
 - Create: `pkg/sandbox/providers/noop/noop.go`
 - Create: `pkg/sandbox/providers/noop/noop_test.go`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `pkg/sandbox/providers/noop/noop_test.go`:
 
@@ -1399,7 +1399,7 @@ func TestNoop_Lifecycle(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run to confirm it fails**
+- [x] **Step 2: Run to confirm it fails**
 
 Run:
 
@@ -1409,7 +1409,7 @@ go test ./pkg/sandbox/providers/noop/ -count=1
 
 Expected: `undefined: New`.
 
-- [ ] **Step 3: Implement noop**
+- [x] **Step 3: Implement noop**
 
 Create `pkg/sandbox/providers/noop/noop.go`:
 
@@ -1469,7 +1469,7 @@ func envSlice(m map[string]string) []string {
 }
 ```
 
-- [ ] **Step 4: Run the tests**
+- [x] **Step 4: Run the tests**
 
 Run:
 
@@ -1479,7 +1479,7 @@ go test ./pkg/sandbox/providers/noop/ -count=1 -v
 
 Expected: test passes.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add pkg/sandbox/providers/noop/
@@ -1494,7 +1494,7 @@ git commit -m "feat(sandbox): add noop provider"
 - Create: `pkg/sandbox/providers/scriptdir/scriptdir.go`
 - Create: `pkg/sandbox/providers/scriptdir/scriptdir_test.go`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `pkg/sandbox/providers/scriptdir/scriptdir_test.go`:
 
@@ -1537,7 +1537,7 @@ func TestScriptdir_EndToEnd(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run to confirm it fails**
+- [x] **Step 2: Run to confirm it fails**
 
 Run:
 
@@ -1547,7 +1547,7 @@ go test ./pkg/sandbox/providers/scriptdir/ -count=1
 
 Expected: undefined.
 
-- [ ] **Step 3: Implement scriptdir**
+- [x] **Step 3: Implement scriptdir**
 
 Create `pkg/sandbox/providers/scriptdir/scriptdir.go`:
 
@@ -1646,7 +1646,7 @@ func envSlice(m map[string]string) []string {
 }
 ```
 
-- [ ] **Step 4: Run the tests**
+- [x] **Step 4: Run the tests**
 
 Run:
 
@@ -1656,7 +1656,7 @@ go test ./pkg/sandbox/providers/scriptdir/ -count=1 -v
 
 Expected: test passes, "hello sandbox" is captured.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add pkg/sandbox/providers/scriptdir/
