@@ -894,7 +894,7 @@ git commit -m "feat(cliwrap): wire EventBus into Manager with state watcher"
 **Files:**
 - Create: `test/integration/restart_test.go`
 
-- [ ] **Step 1: Write the test**
+- [x] **Step 1: Write the test**
 
 Create `test/integration/restart_test.go`:
 
@@ -960,11 +960,11 @@ func TestIntegration_ManualRestartOnFailure(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Note the limitation**
+- [x] **Step 2: Note the limitation**
 
 The test above restarts by calling Start/Close repeatedly on the same handle. A full Manager-driven restart requires wiring the RestartLoop into the Manager, which is Task 6.
 
-- [ ] **Step 3: Run the test**
+- [x] **Step 3: Run the test**
 
 Run:
 
@@ -974,7 +974,7 @@ go test ./test/integration/ -run TestIntegration_ManualRestartOnFailure -count=1
 
 Expected: three crash cycles observed.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add test/integration/restart_test.go
@@ -988,7 +988,7 @@ git commit -m "test(integration): verify manual restart across crash cycles"
 **Files:**
 - Create: `test/chaos/wal_replay_test.go`
 
-- [ ] **Step 1: Write the test**
+- [x] **Step 1: Write the test**
 
 Create `test/chaos/wal_replay_test.go`:
 
@@ -1061,7 +1061,7 @@ func TestChaos_WALReplayAfterDisconnect(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Expose `WALReplayForTest` helper**
+- [x] **Step 2: Expose `WALReplayForTest` helper**
 
 Because the WAL is private, add a test-only export file using Go's `export_test.go` convention.
 This ensures the helper is NOT compiled into the production binary (Go excludes
@@ -1113,7 +1113,7 @@ func (c *Conn) Close(ctx context.Context) error {
 }
 ```
 
-- [ ] **Step 3: Run the chaos test**
+- [x] **Step 3: Run the chaos test**
 
 Run:
 
@@ -1123,7 +1123,7 @@ go test ./test/chaos/ -count=1 -race -v
 
 Expected: test passes; WAL retains unacked messages after a forced close.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add test/chaos/wal_replay_test.go internal/ipc/export_test.go internal/ipc/conn.go
@@ -1137,7 +1137,7 @@ git commit -m "test(chaos): verify WAL retains messages after forced disconnect"
 **Files:**
 - Create: `test/chaos/slow_subscriber_test.go`
 
-- [ ] **Step 1: Write the test**
+- [x] **Step 1: Write the test**
 
 Create `test/chaos/slow_subscriber_test.go`:
 
@@ -1182,7 +1182,7 @@ func TestChaos_SlowSubscriberIsDisconnected(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run**
+- [x] **Step 2: Run**
 
 Run:
 
@@ -1192,7 +1192,7 @@ go test ./test/chaos/ -run TestChaos_SlowSubscriberIsDisconnected -count=1 -race
 
 Expected: subscription closes.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add test/chaos/slow_subscriber_test.go
