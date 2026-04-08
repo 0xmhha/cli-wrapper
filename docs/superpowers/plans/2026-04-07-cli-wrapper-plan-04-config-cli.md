@@ -51,7 +51,7 @@
 - Create: `pkg/config/size.go`
 - Create: `pkg/config/size_test.go`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `pkg/config/size_test.go`:
 
@@ -93,7 +93,7 @@ func TestParseByteSize(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run to confirm it fails**
+- [x] **Step 2: Run to confirm it fails**
 
 Run:
 
@@ -103,7 +103,7 @@ go test ./pkg/config/ -count=1
 
 Expected: `undefined: ParseByteSize`.
 
-- [ ] **Step 3: Implement the parser**
+- [x] **Step 3: Implement the parser**
 
 Create `pkg/config/size.go`:
 
@@ -180,7 +180,7 @@ func byteMultiplier(suffix string) (uint64, bool) {
 }
 ```
 
-- [ ] **Step 4: Run the tests**
+- [x] **Step 4: Run the tests**
 
 Run:
 
@@ -190,7 +190,7 @@ go test ./pkg/config/ -count=1 -v
 
 Expected: 10 cases pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add pkg/config/size.go pkg/config/size_test.go
@@ -205,7 +205,7 @@ git commit -m "feat(config): add byte size parser for YAML values"
 - Create: `pkg/config/env.go`
 - Create: `pkg/config/env_test.go`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `pkg/config/env_test.go`:
 
@@ -257,7 +257,7 @@ func TestExpandEnv_EscapeDollar(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run and confirm it fails**
+- [x] **Step 2: Run and confirm it fails**
 
 Run:
 
@@ -267,7 +267,7 @@ go test ./pkg/config/ -run TestExpandEnv -count=1
 
 Expected: undefined.
 
-- [ ] **Step 3: Implement the expander**
+- [x] **Step 3: Implement the expander**
 
 Create `pkg/config/env.go`:
 
@@ -329,7 +329,7 @@ func resolveEnv(expr string) (string, error) {
 }
 ```
 
-- [ ] **Step 4: Run the tests**
+- [x] **Step 4: Run the tests**
 
 Run:
 
@@ -339,7 +339,7 @@ go test ./pkg/config/ -run TestExpandEnv -count=1 -v
 
 Expected: six tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add pkg/config/env.go pkg/config/env_test.go
@@ -355,7 +355,7 @@ git commit -m "feat(config): add ${VAR} / ${VAR:-default} expansion"
 - Create: `pkg/config/loader.go`
 - Create: `pkg/config/loader_test.go`
 
-- [ ] **Step 1: Add yaml.v3 dependency**
+- [x] **Step 1: Add yaml.v3 dependency**
 
 Run:
 
@@ -366,7 +366,7 @@ go mod tidy
 
 Expected: dependency added.
 
-- [ ] **Step 2: Write the failing test**
+- [x] **Step 2: Write the failing test**
 
 Create `pkg/config/loader_test.go`:
 
@@ -461,7 +461,7 @@ groups:
 }
 ```
 
-- [ ] **Step 3: Run to confirm it fails**
+- [x] **Step 3: Run to confirm it fails**
 
 Run:
 
@@ -471,7 +471,7 @@ go test ./pkg/config/ -run TestLoader -count=1
 
 Expected: undefined.
 
-- [ ] **Step 4: Implement the types and loader**
+- [x] **Step 4: Implement the types and loader**
 
 Create `pkg/config/config.go`:
 
@@ -757,7 +757,7 @@ func parseExceed(s string) (cliwrap.ExceedAction, error) {
 }
 ```
 
-- [ ] **Step 5: Run the tests**
+- [x] **Step 5: Run the tests**
 
 Run:
 
@@ -767,7 +767,7 @@ go test ./pkg/config/ -count=1 -race -v
 
 Expected: all loader tests pass.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add pkg/config/ go.mod go.sum
