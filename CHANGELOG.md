@@ -1,6 +1,40 @@
 # Changelog
 
-## [Unreleased]
+## [0.1.1] - 2026-04-08
+
+First release with published binaries. The `v0.1.0` tag was created
+but its `Release` workflow did not execute due to a race between the
+initial `main` push and the `v0.1.0` tag push (GitHub Actions did not
+index the freshly-added release workflow in time for the tag event).
+The tag itself is still valid for `go get` consumers, but GitHub
+Releases for `v0.1.0` contains no prebuilt artifacts. `v0.1.1` is
+the first tag whose Release workflow ran cleanly end-to-end.
+
+### Fixed
+- `internal/resource/collector_linux.go`: the deferred
+  `os.File.Close()` on `/proc/meminfo` was unchecked, causing the CI
+  Lint job to fail on the first main push. Wrapped in an explicit
+  discard closure. The issue was not caught by local lint runs
+  because the file carries a `//go:build linux` constraint and
+  cross-target golangci-lint on a macOS workstation hits
+  `runtime/cgo` export-data errors.
+- `.github/workflows/dco.yml`: added an explicit bot-author exemption
+  list (`dependabot[bot]`, `github-actions[bot]`, `renovate[bot]`).
+  Without it, Dependabot-authored PRs were universally rejected by
+  the DCO sign-off check since bot commits cannot meaningfully
+  certify the Developer Certificate of Origin.
+
+### Unchanged from v0.1.0
+- All features, public API, and configuration remain identical to
+  v0.1.0. Only the CI plumbing around lint and DCO changed, plus the
+  addition of the Security Guard Agent design spec under
+  `docs/superpowers/specs/`.
+
+## [0.1.0] - 2026-04-08
+
+Initial public release. Tag exists and is consumable via
+`go get github.com/0xmhha/cli-wrapper@v0.1.0`, but no prebuilt
+binaries are attached to its GitHub Release (see note under v0.1.1).
 
 ### Changed
 - **License: relicensed from LGPL-2.1-or-later to Apache-2.0.** The
