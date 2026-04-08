@@ -20,4 +20,4 @@ testdata/fuzz/
 # OS
 .DS_Store
 
-.claude/settings.local.json
+.claude/
