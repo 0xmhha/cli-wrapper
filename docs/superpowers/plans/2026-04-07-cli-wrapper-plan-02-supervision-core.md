@@ -3236,7 +3236,7 @@ git commit -m "feat(agent): dispatcher handles START_CHILD / STOP_CHILD / PING"
 - Create: `internal/supervise/spawner.go`
 - Create: `internal/supervise/spawner_test.go`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `internal/supervise/spawner_test.go`:
 
@@ -3304,7 +3304,7 @@ func TestSpawner_SpawnsAgentAndReceivesHello(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run the test to confirm it fails**
+- [x] **Step 2: Run the test to confirm it fails**
 
 Run:
 
@@ -3314,7 +3314,7 @@ go test ./internal/supervise/ -run TestSpawner -count=1
 
 Expected: `undefined: NewSpawner`.
 
-- [ ] **Step 3: Implement the spawner**
+- [x] **Step 3: Implement the spawner**
 
 Create `internal/supervise/spawner.go`:
 
@@ -3448,7 +3448,7 @@ func (s *Spawner) Spawn(ctx context.Context, agentID string) (*AgentHandle, erro
 }
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run:
 
@@ -3458,7 +3458,7 @@ go test ./internal/supervise/ -count=1 -v -race
 
 Expected: test passes; agent binary is built once and forked.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add internal/supervise/spawner.go internal/supervise/spawner_test.go
@@ -3473,7 +3473,7 @@ git commit -m "feat(supervise): add Spawner for agent subprocess via socketpair"
 - Create: `internal/supervise/watcher.go`
 - Create: `internal/supervise/watcher_test.go`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `internal/supervise/watcher_test.go`:
 
@@ -3504,7 +3504,7 @@ func TestWatcher_EmitsExitCode(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run and confirm it fails**
+- [x] **Step 2: Run and confirm it fails**
 
 Run:
 
@@ -3514,7 +3514,7 @@ go test ./internal/supervise/ -run TestWatcher -count=1
 
 Expected: undefined.
 
-- [ ] **Step 3: Implement the watcher**
+- [x] **Step 3: Implement the watcher**
 
 Create `internal/supervise/watcher.go`:
 
@@ -3576,7 +3576,7 @@ func (w *Watcher) Wait(ctx context.Context) (WatchResult, error) {
 }
 ```
 
-- [ ] **Step 4: Run and verify**
+- [x] **Step 4: Run and verify**
 
 Run:
 
@@ -3586,7 +3586,7 @@ go test ./internal/supervise/ -run TestWatcher -count=1 -v
 
 Expected: test passes.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add internal/supervise/watcher.go internal/supervise/watcher_test.go
@@ -3601,7 +3601,7 @@ git commit -m "feat(supervise): add context-aware OS process watcher"
 - Create: `internal/controller/controller.go`
 - Create: `internal/controller/controller_test.go`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `internal/controller/controller_test.go`:
 
@@ -3655,7 +3655,7 @@ func TestController_StartAgentAndStop(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Expose a test helper in supervise**
+- [x] **Step 2: Expose a test helper in supervise**
 
 Create `internal/supervise/testhelpers.go`:
 
@@ -3710,7 +3710,7 @@ func findModuleRoot(t *testing.T) string {
 }
 ```
 
-- [ ] **Step 3: Implement the Controller**
+- [x] **Step 3: Implement the Controller**
 
 Create `internal/controller/controller.go`:
 
@@ -3882,7 +3882,7 @@ func (c *Controller) handleMessage(msg ipc.OutboxMessage) {
 }
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run:
 
@@ -3892,7 +3892,7 @@ go test ./internal/controller/ -count=1 -race -v
 
 Expected: the controller starts, runs `/bin/sh -c 'exit 0'`, and settles in `StateStopped`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add internal/controller/ internal/supervise/testhelpers.go
@@ -3909,7 +3909,7 @@ git commit -m "feat(controller): add Controller skeleton and start/stop flow"
 - Create: `pkg/cliwrap/process.go`
 - Create: `pkg/cliwrap/manager_test.go`
 
-- [ ] **Step 1: Write the failing integration test**
+- [x] **Step 1: Write the failing integration test**
 
 Create `pkg/cliwrap/manager_test.go`:
 
@@ -3959,7 +3959,7 @@ func TestManager_RegisterAndRun(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run and confirm it fails**
+- [x] **Step 2: Run and confirm it fails**
 
 Run:
 
@@ -3969,7 +3969,7 @@ go test ./pkg/cliwrap/ -run TestManager -count=1
 
 Expected: undefined types.
 
-- [ ] **Step 3: Implement Manager, options, and ProcessHandle**
+- [x] **Step 3: Implement Manager, options, and ProcessHandle**
 
 Create `pkg/cliwrap/options.go`:
 
@@ -4176,7 +4176,7 @@ func (m *Manager) newController(spec Spec) (*controller.Controller, error) {
 }
 ```
 
-- [ ] **Step 4: Run the integration test to verify it passes**
+- [x] **Step 4: Run the integration test to verify it passes**
 
 Run:
 
@@ -4186,7 +4186,7 @@ go test ./pkg/cliwrap/ -run TestManager -count=1 -race -v
 
 Expected: the test starts an agent, runs `exit 0`, observes `StateStopped`, and shuts down cleanly.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add pkg/cliwrap/options.go pkg/cliwrap/manager.go pkg/cliwrap/process.go pkg/cliwrap/manager_test.go
@@ -4200,7 +4200,7 @@ git commit -m "feat(cliwrap): add Manager public API with Register/Shutdown"
 **Files:**
 - Create: `test/integration/crash_test.go`
 
-- [ ] **Step 1: Write the test**
+- [x] **Step 1: Write the test**
 
 Create `test/integration/crash_test.go`:
 
@@ -4283,7 +4283,7 @@ func findRoot(t *testing.T) string {
 }
 ```
 
-- [ ] **Step 2: Build fixtures first**
+- [x] **Step 2: Build fixtures first**
 
 Run:
 
@@ -4293,7 +4293,7 @@ make fixtures
 
 Expected: `test/fixtures/bin/fixture-crasher` exists.
 
-- [ ] **Step 3: Run the integration test**
+- [x] **Step 3: Run the integration test**
 
 Run:
 
@@ -4303,7 +4303,7 @@ go test ./test/integration/ -run TestIntegration_CrashDetection -count=1 -race -
 
 Expected: test passes, crasher exits with code 17, process transitions to `StateCrashed`.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add test/integration/
@@ -4317,7 +4317,7 @@ git commit -m "test(integration): add crash-detection integration test"
 **Files:**
 - Create: `test/integration/leak_test.go`
 
-- [ ] **Step 1: Write the stress test**
+- [x] **Step 1: Write the stress test**
 
 Create `test/integration/leak_test.go`:
 
@@ -4380,7 +4380,7 @@ func TestIntegration_NoLeaksAcrossCycles(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Remove the compile-check hack**
+- [x] **Step 2: Remove the compile-check hack**
 
 The inline `mgr2 := mgr.(*cliwrap.Manager)` only works if `NewManager` returns the concrete type. Update the test to remove the hack and instead use a fresh ID for each iteration:
 
@@ -4440,7 +4440,7 @@ func TestIntegration_NoLeaksAcrossCycles(t *testing.T) {
 }
 ```
 
-- [ ] **Step 3: Run the stress test**
+- [x] **Step 3: Run the stress test**
 
 Run:
 
@@ -4450,7 +4450,7 @@ go test ./test/integration/ -run TestIntegration_NoLeaksAcrossCycles -count=1 -r
 
 Expected: 20 cycles complete with no goroutine leaks.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add test/integration/leak_test.go
