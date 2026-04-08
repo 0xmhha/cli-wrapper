@@ -1207,7 +1207,7 @@ git commit -m "test(chaos): verify slow subscribers are disconnected"
 - Create: `test/bench/ipc_bench_test.go`
 - Modify: `Makefile`
 
-- [ ] **Step 1: Create an ipc benchmark**
+- [x] **Step 1: Create an ipc benchmark**
 
 Create `test/bench/ipc_bench_test.go`:
 
@@ -1251,7 +1251,7 @@ func BenchmarkIPC_PingPong(b *testing.B) {
 }
 ```
 
-- [ ] **Step 2: Extend the Makefile**
+- [x] **Step 2: Extend the Makefile**
 
 Append to `Makefile`:
 
@@ -1273,7 +1273,7 @@ fuzz-short:
 	$(GO) test -run=^$ -fuzz=FuzzFrameReader -fuzztime=30s ./internal/ipc/...
 ```
 
-- [ ] **Step 3: Run benchmark smoke**
+- [x] **Step 3: Run benchmark smoke**
 
 Run:
 
@@ -1283,7 +1283,7 @@ make bench
 
 Expected: a benchmark line is printed.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add test/bench/ Makefile
@@ -1297,7 +1297,7 @@ git commit -m "chore: add bench/integration/chaos/fuzz-short make targets"
 **Files:**
 - Modify: `.github/workflows/ci.yml`
 
-- [ ] **Step 1: Replace the workflow**
+- [x] **Step 1: Replace the workflow**
 
 Replace `.github/workflows/ci.yml` contents with:
 
@@ -1375,7 +1375,7 @@ jobs:
         run: make fuzz-short
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add .github/workflows/ci.yml
@@ -1390,7 +1390,7 @@ git commit -m "ci: expand matrix with unit/integration/chaos/fuzz jobs"
 - Modify: `README.md`
 - Create: `CHANGELOG.md`
 
-- [ ] **Step 1: Update README with usage snippets**
+- [x] **Step 1: Update README with usage snippets**
 
 Replace `README.md` with:
 
@@ -1473,7 +1473,7 @@ make fuzz-short     # 30s fuzz run
 v1 targets macOS and Linux. Windows is on the roadmap.
 ```
 
-- [ ] **Step 2: Create CHANGELOG**
+- [x] **Step 2: Create CHANGELOG**
 
 Create `CHANGELOG.md`:
 
@@ -1496,7 +1496,7 @@ Create `CHANGELOG.md`:
 - Windows is not supported.
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add README.md CHANGELOG.md
@@ -1507,14 +1507,14 @@ git commit -m "docs: update README with usage and add initial CHANGELOG"
 
 ## Verification Checklist
 
-- [ ] `make test`, `make integration`, `make chaos`, `make bench` all pass locally on Linux and macOS.
-- [ ] `make fuzz-short` runs for 30s with no crashes.
-- [ ] All integration tests call `goleak.VerifyNone(t)`.
+- [x] `make test`, `make integration`, `make chaos`, `make bench` all pass locally on macOS (Linux verification deferred to CI).
+- [x] `make fuzz-short` runs for 30s with no crashes.
+- [x] All integration tests call `goleak.VerifyNone(t)`.
 - [ ] The CI matrix is green on both Go 1.22 and 1.23.
-- [ ] Every `Subscription` from the EventBus can be closed without leaks.
-- [ ] The heartbeat detector fires `OnMiss` after three consecutive missed pongs.
-- [ ] The restart loop respects `MaxRestarts` and the chosen backoff.
-- [ ] WAL retains unacked messages across a forced disconnect.
+- [x] Every `Subscription` from the EventBus can be closed without leaks.
+- [x] The heartbeat detector fires `OnMiss` after three consecutive missed pongs.
+- [x] The restart loop respects `MaxRestarts` and the chosen backoff.
+- [x] WAL retains unacked messages across a forced disconnect.
 
 ## What This Plan Does NOT Cover
 
