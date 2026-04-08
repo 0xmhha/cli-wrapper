@@ -18,12 +18,15 @@
   - 13 packages: + internal/resource, pkg/sandbox, pkg/sandbox/providers/noop, pkg/sandbox/providers/scriptdir
   - Key components: ProcessCollector + SystemCollector (linux/darwin), Evaluator (sustained breach), Monitor (ticker), Manager.ChildPIDs(), Sandbox Provider/Instance interfaces, Script injection helpers, noop + scriptdir providers
 
-## Current Plan
-- **Plan 04 — Config & Management CLI**: NOT STARTED
-  - Plan file: `docs/superpowers/plans/2026-04-07-cli-wrapper-plan-04-config-cli.md`
+## Completed Plans (continued)
+- **Plan 04 — Config & Management CLI**: 11/11 tasks DONE
+  - Build: PASS, Vet: PASS, Tests: PASS (race), goleak clean
+  - 16 packages: + pkg/config, internal/mgmt, cmd/cliwrap
+  - Key components: ParseByteSize, ExpandEnv, YAML config loader (Spec validation, duplicate ID check), mgmt protocol (10 message types in 0xA0..0xAF), mgmt UDS Server + Client, Manager.List/StatusOf/Stop, cliwrap CLI binary (run/validate/list/status/stop/logs/events/version)
 
-## Remaining Plans
-- Plan 05 — Hardening & Reliability: NOT STARTED
+## Current Plan
+- **Plan 05 — Hardening & Reliability**: NOT STARTED
+  - Plan file: `docs/superpowers/plans/2026-04-07-cli-wrapper-plan-05-hardening.md`
 
 ## Commit Rules
 - Open source style, English, concise
