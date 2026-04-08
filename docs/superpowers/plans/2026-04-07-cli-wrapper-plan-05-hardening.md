@@ -1516,6 +1516,14 @@ git commit -m "docs: update README with usage and add initial CHANGELOG"
 - [x] The restart loop respects `MaxRestarts` and the chosen backoff.
 - [x] WAL retains unacked messages across a forced disconnect.
 
+## Reliability Test Files (Added Post-Plan)
+
+Three reliability tests listed in the File Structure header but lacking dedicated task bodies were added in a follow-up commit:
+
+- `test/integration/heartbeat_test.go` — verifies heartbeat detection
+- `test/integration/shutdown_test.go` — verifies bulk shutdown completes within bound
+- `test/chaos/memory_bounded_test.go` — verifies IPC memory stays bounded under stress
+
 ## What This Plan Does NOT Cover
 
 - **Log and event streaming** over the management socket — will remain a roadmap item until there is a real consumer (dashboard, CLI attach). The stubs in Plan 04 make the command surface complete without blocking v1.
