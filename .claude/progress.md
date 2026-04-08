@@ -12,12 +12,17 @@
   - 10 packages: agent, controller, cwtypes, eventbus, ipc, logcollect, platform, supervise, pkg/cliwrap, pkg/event + test/integration
   - Key components: Platform abstraction, Event bus, Log collector, Spec/Status types, SpecBuilder, ExponentialBackoff, Test fixtures, Agent binary (Runner+Dispatcher), Spawner (socketpair+SIGTERM→SIGKILL), Controller, Manager (public API), integration tests (crash detection, leak stress)
 
+## Completed Plans (continued)
+- **Plan 03 — Resource & Sandbox**: 10/10 tasks DONE
+  - Build: PASS, Vet: PASS, Tests: PASS (race), goleak clean
+  - 13 packages: + internal/resource, pkg/sandbox, pkg/sandbox/providers/noop, pkg/sandbox/providers/scriptdir
+  - Key components: ProcessCollector + SystemCollector (linux/darwin), Evaluator (sustained breach), Monitor (ticker), Manager.ChildPIDs(), Sandbox Provider/Instance interfaces, Script injection helpers, noop + scriptdir providers
+
 ## Current Plan
-- **Plan 03 — Resource & Sandbox**: NOT STARTED
-  - Plan file: `docs/superpowers/plans/2026-04-07-cli-wrapper-plan-03-resource-sandbox.md`
+- **Plan 04 — Config & Management CLI**: NOT STARTED
+  - Plan file: `docs/superpowers/plans/2026-04-07-cli-wrapper-plan-04-config-cli.md`
 
 ## Remaining Plans
-- Plan 04 — Config & Management CLI: NOT STARTED
 - Plan 05 — Hardening & Reliability: NOT STARTED
 
 ## Commit Rules
