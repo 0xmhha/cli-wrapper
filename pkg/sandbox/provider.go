@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Package sandbox defines the plugin interface for isolating managed CLI processes.
 package sandbox
 

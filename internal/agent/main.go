@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Package agent contains the logic that runs inside the cliwrap-agent
 // subprocess. It owns the child CLI process and the IPC connection back
 // to the host.

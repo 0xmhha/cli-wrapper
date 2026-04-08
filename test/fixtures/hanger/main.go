@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // fixture-hanger ignores SIGTERM until it receives SIGKILL.
 package main
 

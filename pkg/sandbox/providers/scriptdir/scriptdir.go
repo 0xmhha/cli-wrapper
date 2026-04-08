@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Package scriptdir is a reference sandbox provider that writes scripts into
 // a temp directory and runs them via /bin/sh. It does NOT provide isolation
 // and exists only to demonstrate the script-injection pattern.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 package cliwrap
 
 // ChildPIDs returns a snapshot of running (process ID -> child PID) pairs.

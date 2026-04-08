@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Package fixtures provides a go:generate-friendly entry point for
 // compiling the test binaries. To build them all:
 //

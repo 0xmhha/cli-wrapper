@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Package mgmt defines the control-socket protocol between the cliwrap
 // management CLI and a running Manager.
 package mgmt

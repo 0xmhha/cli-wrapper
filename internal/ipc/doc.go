@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Package ipc implements the cli-wrapper inter-process communication layer.
 //
 // It provides a length-prefixed framed protocol over a Unix Domain Socket.

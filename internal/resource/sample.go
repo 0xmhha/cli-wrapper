@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Package resource implements per-process and system-wide resource sampling
 // and enforcement.
 package resource

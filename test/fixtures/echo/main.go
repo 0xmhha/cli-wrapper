@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // fixture-echo reads stdin line by line and writes each line to stdout.
 package main
 

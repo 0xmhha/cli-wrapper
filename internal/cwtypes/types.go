@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Package cwtypes contains the shared type definitions used by both
 // pkg/cliwrap (the public API) and internal/controller. Placing them in
 // a leaf package avoids an import cycle.

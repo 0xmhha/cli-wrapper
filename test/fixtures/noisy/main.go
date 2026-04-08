@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // fixture-noisy writes a heartbeat line to stdout and stderr every 100ms.
 package main
 

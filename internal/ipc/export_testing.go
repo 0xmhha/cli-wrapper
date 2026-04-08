@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 package ipc
 
 // WALReplayForTest exposes the Spiller's WAL replay to external test packages

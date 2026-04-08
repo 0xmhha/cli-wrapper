@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // fixture-crasher exits with a specific code after a delay.
 package main
 

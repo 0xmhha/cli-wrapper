@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Package cliwrap re-exports the canonical types from internal/cwtypes
 // via Go type aliases, so the public API surface is unchanged.
 package cliwrap

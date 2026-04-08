@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Package controller manages the lifecycle of a single cliwrap-agent
 // subprocess and its managed child. Each Controller owns one agent
 // connection, tracks state transitions, and translates inbound IPC

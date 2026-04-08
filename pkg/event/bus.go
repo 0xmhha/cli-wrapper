@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 package event
 
 // Bus is the publish/subscribe API for cliwrap events.

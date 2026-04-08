@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 package cliwrap
 
 // ManagerOption mutates a Manager during construction.
