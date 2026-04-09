@@ -29,6 +29,15 @@ jobs:
       - name: Vet
         run: go vet ./...
 
+      # go test ./... runs integration tests transitively, which shell out to
+      # binaries under test/fixtures/bin/. Build them here so those tests see
+      # real children instead of failing with exec-not-found. Without this,
+      # tests that wait for StateRunning (logs, etc.) silently time out while
+      # tests that wait for StateCrashed "accidentally" pass because the
+      # exec error transitions the controller straight to Crashed.
+      - name: Fixtures
+        run: make fixtures
+
       - name: Unit tests
         run: go test -race -count=1 ./...
 
