@@ -5,6 +5,7 @@ package mgmt
 import (
 	"context"
 	"net"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -12,12 +13,18 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
 
+	"github.com/0xmhha/cli-wrapper/internal/eventbus"
 	"github.com/0xmhha/cli-wrapper/internal/ipc"
+	"github.com/0xmhha/cli-wrapper/pkg/event"
 )
 
-// Replace the existing fakeManager with this expanded version.
+// fakeManager is the test double used by all mgmt server tests. It
+// satisfies the ManagerAPI interface with minimal stubs. Tests that
+// exercise specific methods may set the corresponding fields to tune
+// behavior.
 type fakeManager struct {
 	logs map[string][]byte // key = id + "/" + stream
+	bus  *eventbus.Bus     // lazily created via Events()
 }
 
 func (f *fakeManager) List() []ListEntry {
@@ -36,6 +43,17 @@ func (f *fakeManager) LogsSnapshot(id string, stream uint8) []byte {
 		return nil
 	}
 	return f.logs[id+"/"+string(rune('0'+stream))]
+}
+
+// Events lazily constructs an in-memory event bus and returns it.
+// Tests that want to publish events can call this and then Publish
+// via the returned bus; tests that do not care about events can
+// ignore the lazy init entirely.
+func (f *fakeManager) Events() event.Bus {
+	if f.bus == nil {
+		f.bus = eventbus.New(16)
+	}
+	return f.bus
 }
 
 var errNotFound = &notFoundError{}
@@ -120,4 +138,81 @@ func TestServer_LogsRequestRoundTrip(t *testing.T) {
 	require.Equal(t, uint8(0), resp.Stream)
 	require.Equal(t, []byte("out1\nout2\n"), resp.Data)
 	require.True(t, resp.EOF)
+}
+
+func TestServer_EventsSubscribeStreamsFrames(t *testing.T) {
+	defer goleak.VerifyNone(t)
+
+	fm := &fakeManager{}
+	// Pre-construct the bus so the test publisher can push events
+	// after the subscription is registered server-side. The deferred
+	// bus.Close() is critical: it closes the subscription channel,
+	// causing the server's `range sub.Events()` loop inside
+	// handleEventsStream to exit, which in turn lets handleConn
+	// return cleanly so goleak.VerifyNone does not catch a leaked
+	// server goroutine on test exit.
+	bus := fm.Events().(*eventbus.Bus)
+	defer bus.Close()
+
+	// macOS unix-socket paths have a ~104-byte SUN_LEN limit, and
+	// t.TempDir() + the long test name can easily exceed it. Use a
+	// shorter custom path.
+	shortDir, err := os.MkdirTemp("", "evtsub-")
+	require.NoError(t, err)
+	defer func() { _ = os.RemoveAll(shortDir) }()
+	sockPath := filepath.Join(shortDir, "m.sock")
+	srv, err := NewServer(ServerOptions{
+		SocketPath: sockPath,
+		Manager:    fm,
+		SpillerDir: t.TempDir(),
+	})
+	require.NoError(t, err)
+	require.NoError(t, srv.Start())
+	defer func() {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+		_ = srv.Close(ctx)
+	}()
+
+	cli, err := Dial(sockPath)
+	require.NoError(t, err)
+	defer func() { _ = cli.Close() }()
+
+	// Send the subscribe frame without waiting for a response.
+	require.NoError(t, cli.Stream(MsgEventsSubscribe, EventsSubscribePayload{}))
+
+	// Publish events from a goroutine until the test ends. This
+	// solves the "subscribe is asynchronous server-side" race: we
+	// cannot observe the exact moment the server registers the
+	// subscription, so we keep republishing until the client's
+	// ReadFrame returns one event, then stop.
+	stopPublishing := make(chan struct{})
+	publishDone := make(chan struct{})
+	go func() {
+		defer close(publishDone)
+		ticker := time.NewTicker(10 * time.Millisecond)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-stopPublishing:
+				return
+			case <-ticker.C:
+				bus.Publish(event.NewProcessStopped("p1", time.Now(), 0))
+			}
+		}
+	}()
+
+	// First event observation — signals that the subscription is
+	// registered on the server side.
+	h, body, err := cli.ReadFrame()
+	require.NoError(t, err)
+	require.Equal(t, MsgEventsStream, h.MsgType)
+	var p EventsStreamPayload
+	require.NoError(t, ipc.DecodePayload(body, &p))
+	require.Equal(t, "p1", p.ProcessID)
+	require.Equal(t, string(event.TypeProcessStopped), p.Type)
+
+	// Stop publishing now that we know the stream works.
+	close(stopPublishing)
+	<-publishDone
 }

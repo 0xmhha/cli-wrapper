@@ -10,6 +10,16 @@
   Under the hood, the agent now tees child stdout/stderr into
   `MsgLogChunk` IPC frames; the host Manager owns a `logcollect.Collector`
   with a 1 MiB per-stream ring buffer per process.
+- `cliwrap events` now streams lifecycle events (process started,
+  stopped, crashed, etc.) from a running manager over the mgmt
+  socket. Use `--process <id,id,...>` to filter by process id; empty
+  means "all processes". Events are printed in
+  `HH:MM:SS.mmm  event.type  process.id  summary` format, one per
+  line, until the client disconnects (ctrl-c) or the manager shuts
+  down. The mgmt protocol gains a streaming upgrade: after receiving
+  `MsgEventsSubscribe`, the server keeps the connection open and
+  pushes `MsgEventsStream` frames from the Manager's event bus until
+  either side closes.
 
 ## [0.1.1] - 2026-04-08
 

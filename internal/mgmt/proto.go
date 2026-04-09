@@ -70,8 +70,11 @@ type LogsStreamPayload struct {
 	EOF    bool   `msgpack:"eof"`
 }
 
-// EventsSubscribePayload has no fields yet; included for future filters.
-type EventsSubscribePayload struct{}
+// EventsSubscribePayload is sent by a client to subscribe to a stream of
+// lifecycle events. An empty ProcessIDs slice subscribes to every process.
+type EventsSubscribePayload struct {
+	ProcessIDs []string `msgpack:"pids"`
+}
 
 // EventsStreamPayload carries a serialized event summary.
 type EventsStreamPayload struct {

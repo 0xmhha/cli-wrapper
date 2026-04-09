@@ -55,3 +55,33 @@ func (c *Client) Call(t ipc.MsgType, payload any) (ipc.Header, []byte, error) {
 	}
 	return c.r.ReadFrame()
 }
+
+// Stream sends a request without waiting for a response. Use this for
+// streaming upgrades like MsgEventsSubscribe where the server pushes
+// frames until the client disconnects. After Stream returns
+// successfully, callers should drain frames via ReadFrame in a loop.
+func (c *Client) Stream(t ipc.MsgType, payload any) error {
+	c.seq++
+	var data []byte
+	if payload != nil {
+		b, err := ipc.EncodePayload(payload)
+		if err != nil {
+			return err
+		}
+		data = b
+	}
+	_, err := c.w.WriteFrame(ipc.Header{
+		MsgType: t,
+		SeqNo:   c.seq,
+		Length:  uint32(len(data)),
+	}, data)
+	return err
+}
+
+// ReadFrame reads one inbound frame from the server. Intended for use
+// after Stream, where the server may push arbitrarily many frames.
+// Returns io.EOF or a similar error when the server closes the
+// connection.
+func (c *Client) ReadFrame() (ipc.Header, []byte, error) {
+	return c.r.ReadFrame()
+}

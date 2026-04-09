@@ -54,7 +54,7 @@ func main() {
 		fmt.Println("  status     <id>                show one process's status")
 		fmt.Println("  stop       <id>                ask a process to stop")
 		fmt.Println("  logs       [--stream s] <id>   show a process's log snapshot")
-		fmt.Println("  events                         stream events (not yet implemented)")
+		fmt.Println("  events     [--process ids]     stream lifecycle events")
 		fmt.Println("  version                        print the cliwrap version")
 		exit = 0
 	default:

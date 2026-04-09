@@ -12,6 +12,7 @@ import (
 	"sync"
 
 	"github.com/0xmhha/cli-wrapper/internal/ipc"
+	"github.com/0xmhha/cli-wrapper/pkg/event"
 )
 
 // ManagerAPI is the subset of Manager functionality the server exposes.
@@ -21,6 +22,7 @@ type ManagerAPI interface {
 	StatusOf(id string) (ListEntry, error)
 	Stop(ctx context.Context, id string) error
 	LogsSnapshot(id string, stream uint8) []byte
+	Events() event.Bus
 }
 
 // ServerOptions configures the management server.
@@ -93,6 +95,18 @@ func (s *Server) handleConn(conn net.Conn) {
 		if err != nil {
 			return
 		}
+
+		// MsgEventsSubscribe upgrades the connection into a streaming
+		// channel: after receiving the subscribe request, the server
+		// pushes MsgEventsStream frames as events arrive until either
+		// the client disconnects or the manager's bus closes. The
+		// connection is dedicated to the stream and does NOT return to
+		// the request-response loop.
+		if h.MsgType == MsgEventsSubscribe {
+			s.handleEventsStream(body, writer)
+			return
+		}
+
 		resp, respType, rerr := s.handleRequest(h, body)
 		if rerr != nil {
 			return
@@ -110,6 +124,49 @@ func (s *Server) handleConn(conn net.Conn) {
 			return
 		}
 	}
+}
+
+// handleEventsStream subscribes to the manager's event bus and pushes
+// each event to the client as a MsgEventsStream frame until either the
+// bus closes (range over channel exits) or the client disconnects
+// (WriteFrame returns an error).
+func (s *Server) handleEventsStream(body []byte, writer *ipc.FrameWriter) {
+	var req EventsSubscribePayload
+	_ = ipc.DecodePayload(body, &req)
+
+	bus := s.opts.Manager.Events()
+	sub := bus.Subscribe(event.Filter{ProcessIDs: req.ProcessIDs})
+	defer func() { _ = sub.Close() }()
+
+	for e := range sub.Events() {
+		payload := EventsStreamPayload{
+			ProcessID: e.ProcessID(),
+			Type:      string(e.EventType()),
+			Timestamp: e.Timestamp().UnixNano(),
+			Summary:   summarizeEvent(e),
+		}
+		data, err := ipc.EncodePayload(payload)
+		if err != nil {
+			continue
+		}
+		_, err = writer.WriteFrame(ipc.Header{
+			MsgType: MsgEventsStream,
+			Length:  uint32(len(data)),
+		}, data)
+		if err != nil {
+			// Client disconnected; stop streaming. The deferred
+			// Close will remove the subscription from the bus.
+			return
+		}
+	}
+}
+
+// summarizeEvent extracts a short human-readable description of an
+// event for streaming over the mgmt protocol. The current schema carries
+// only (ProcessID, Type, Timestamp, Summary), so this helper collapses
+// the per-type context into a single string.
+func summarizeEvent(e event.Event) string {
+	return fmt.Sprintf("%s %s", e.EventType(), e.ProcessID())
 }
 
 func (s *Server) handleRequest(h ipc.Header, body []byte) (any, ipc.MsgType, error) {
