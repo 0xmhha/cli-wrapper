@@ -29,6 +29,9 @@ type Manager struct {
 
 	busOnce sync.Once
 	bus     *eventbus.Bus
+
+	// cliwrap logs pipeline — Collector is lazy-constructed.
+	logs managerLogs
 }
 
 // NewManager constructs a Manager with the given options.
