@@ -64,6 +64,12 @@ func (c *Controller) State() cwtypes.State {
 	return cwtypes.State(c.state.Load())
 }
 
+// Options returns the options the controller was constructed with.
+// Exposed for test inspection; production code should not rely on this.
+func (c *Controller) Options() ControllerOptions {
+	return c.opts
+}
+
 // ChildPID returns the PID of the running child (0 if none).
 func (c *Controller) ChildPID() int {
 	c.mu.Lock()

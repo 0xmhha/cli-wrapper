@@ -38,3 +38,32 @@ func TestManager_LogsSnapshotIsolatesProcesses(t *testing.T) {
 	require.Equal(t, []byte("A-out"), m.LogsSnapshot("a", 0))
 	require.Equal(t, []byte("B-out"), m.LogsSnapshot("b", 0))
 }
+
+func TestManager_NewControllerInjectsOnLogChunk(t *testing.T) {
+	// Use the public NewManager constructor so the internal Spawner is
+	// set up. Direct &Manager{...} literals leave spawner nil, which
+	// causes controller.NewController to reject the options with
+	// "controller: Spawner is required". The agent path need not be
+	// real — it's only exec'd at Start() time, and this test never
+	// calls Start().
+	m, err := NewManager(
+		WithAgentPath("/does/not/matter"),
+		WithRuntimeDir(t.TempDir()),
+	)
+	require.NoError(t, err)
+
+	spec, err := NewSpec("p1", "/bin/true").Build()
+	require.NoError(t, err)
+
+	ctrl, err := m.newController(spec)
+	require.NoError(t, err)
+	require.NotNil(t, ctrl)
+
+	// Simulate the controller forwarding a log chunk. The closure
+	// should route to m.emitLogChunk with processID="p1".
+	opts := ctrl.Options() // helper added below
+	require.NotNil(t, opts.OnLogChunk, "newController must set OnLogChunk")
+	opts.OnLogChunk(0, []byte("from p1"))
+
+	require.Equal(t, []byte("from p1"), m.LogsSnapshot("p1", 0))
+}

@@ -113,9 +113,13 @@ func (m *Manager) Shutdown(ctx context.Context) error {
 }
 
 func (m *Manager) newController(spec Spec) (*controller.Controller, error) {
+	id := spec.ID
 	return controller.NewController(controller.ControllerOptions{
 		Spec:       spec,
 		Spawner:    m.spawner,
 		RuntimeDir: m.runtimeDir,
+		OnLogChunk: func(stream uint8, data []byte) {
+			m.emitLogChunk(id, stream, data)
+		},
 	})
 }
