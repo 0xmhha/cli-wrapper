@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/0xmhha/cli-wrapper/internal/cwtypes"
 	"github.com/0xmhha/cli-wrapper/internal/ipc"
 	"github.com/0xmhha/cli-wrapper/pkg/event"
 )
@@ -22,6 +23,11 @@ type ManagerAPI interface {
 	StatusOf(id string) (ListEntry, error)
 	Stop(ctx context.Context, id string) error
 	LogsSnapshot(id string, stream uint8) []byte
+	// WatchLogs returns a channel that delivers every log chunk
+	// emitted for processID after the subscription is registered,
+	// plus an unregister function the caller MUST invoke exactly
+	// once. The channel closes when the manager shuts down.
+	WatchLogs(processID string) (<-chan cwtypes.LogChunk, func())
 	Events() event.Bus
 }
 
@@ -107,6 +113,19 @@ func (s *Server) handleConn(conn net.Conn) {
 			return
 		}
 
+		// MsgLogsRequest with Follow=true is also a streaming upgrade.
+		// The snapshot frame is sent first (EOF=false in follow mode,
+		// EOF=true in snapshot mode), then in follow mode the server
+		// keeps pushing frames from Manager.WatchLogs until client
+		// disconnect or manager shutdown.
+		if h.MsgType == MsgLogsRequest {
+			var req LogsRequestPayload
+			if derr := ipc.DecodePayload(body, &req); derr == nil && req.Follow {
+				s.handleLogsFollow(writer, req)
+				return
+			}
+		}
+
 		resp, respType, rerr := s.handleRequest(h, body)
 		if rerr != nil {
 			return
@@ -167,6 +186,70 @@ func (s *Server) handleEventsStream(body []byte, writer *ipc.FrameWriter) {
 // the per-type context into a single string.
 func summarizeEvent(e event.Event) string {
 	return fmt.Sprintf("%s %s", e.EventType(), e.ProcessID())
+}
+
+// handleLogsFollow writes the current ring-buffer snapshot to the
+// client as a single MsgLogsStream frame with EOF=false, then
+// subscribes to live log chunks via Manager.WatchLogs and pushes each
+// new chunk as an additional MsgLogsStream frame with EOF=false until
+// either the client disconnects (WriteFrame error) or the manager
+// shuts down (watcher channel closes).
+//
+// Unlike the snapshot-only handler in handleRequest, this method
+// keeps the connection open and the caller MUST return from
+// handleConn immediately after this function returns — otherwise the
+// request-response loop would double-handle the connection.
+func (s *Server) handleLogsFollow(writer *ipc.FrameWriter, req LogsRequestPayload) {
+	// Step 1: send the current ring-buffer snapshot.
+	snap := s.opts.Manager.LogsSnapshot(req.ID, req.Stream)
+	snapPayload := LogsStreamPayload{
+		ID:     req.ID,
+		Stream: req.Stream,
+		Data:   snap,
+		EOF:    false, // more frames to follow
+	}
+	if err := writeLogsStreamFrame(writer, snapPayload); err != nil {
+		return
+	}
+
+	// Step 2: register a live watcher and forward every chunk
+	// matching the requested stream. An unregister function must be
+	// invoked exactly once — via defer.
+	ch, unregister := s.opts.Manager.WatchLogs(req.ID)
+	defer unregister()
+
+	for chunk := range ch {
+		// The watcher has no stream filter, so skip chunks that do
+		// not match the request's stream id. (Request stream 0/1
+		// maps 1:1 to the child's stdout/stderr channels.)
+		if chunk.Stream != req.Stream {
+			continue
+		}
+		payload := LogsStreamPayload{
+			ID:     req.ID,
+			Stream: chunk.Stream,
+			Data:   chunk.Data,
+			EOF:    false,
+		}
+		if err := writeLogsStreamFrame(writer, payload); err != nil {
+			return
+		}
+	}
+}
+
+// writeLogsStreamFrame encodes and sends one MsgLogsStream frame.
+// Helper used by both the snapshot and follow handlers to avoid
+// duplicating the encode/write boilerplate.
+func writeLogsStreamFrame(writer *ipc.FrameWriter, payload LogsStreamPayload) error {
+	data, err := ipc.EncodePayload(payload)
+	if err != nil {
+		return err
+	}
+	_, err = writer.WriteFrame(ipc.Header{
+		MsgType: MsgLogsStream,
+		Length:  uint32(len(data)),
+	}, data)
+	return err
 }
 
 func (s *Server) handleRequest(h ipc.Header, body []byte) (any, ipc.MsgType, error) {

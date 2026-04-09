@@ -4,6 +4,7 @@ package cliwrap
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -61,9 +62,84 @@ func TestManager_NewControllerInjectsOnLogChunk(t *testing.T) {
 
 	// Simulate the controller forwarding a log chunk. The closure
 	// should route to m.emitLogChunk with processID="p1".
-	opts := ctrl.Options() // helper added below
+	// (Controller.Options is a test-only accessor defined on
+	// internal/controller.Controller — see controller.go.)
+	opts := ctrl.Options()
 	require.NotNil(t, opts.OnLogChunk, "newController must set OnLogChunk")
 	opts.OnLogChunk(0, []byte("from p1"))
 
 	require.Equal(t, []byte("from p1"), m.LogsSnapshot("p1", 0))
+}
+
+func TestManager_WatchLogsDeliversLiveChunks(t *testing.T) {
+	m := &Manager{}
+
+	ch, unregister := m.WatchLogs("p1")
+	defer unregister()
+
+	// Emit one matching chunk and one non-matching (different id).
+	m.emitLogChunk("p1", 0, []byte("first"))
+	m.emitLogChunk("other", 0, []byte("ignored"))
+	m.emitLogChunk("p1", 1, []byte("second-err"))
+
+	// Drain three events: both p1 chunks; the "other" chunk must
+	// not arrive on this watcher.
+	got := make([]LogChunk, 0, 2)
+	timeout := time.After(500 * time.Millisecond)
+	for len(got) < 2 {
+		select {
+		case c, ok := <-ch:
+			require.True(t, ok)
+			got = append(got, c)
+		case <-timeout:
+			t.Fatalf("timed out waiting for chunks, got %d", len(got))
+		}
+	}
+
+	require.Equal(t, "p1", got[0].ProcessID)
+	require.Equal(t, uint8(0), got[0].Stream)
+	require.Equal(t, []byte("first"), got[0].Data)
+
+	require.Equal(t, "p1", got[1].ProcessID)
+	require.Equal(t, uint8(1), got[1].Stream)
+	require.Equal(t, []byte("second-err"), got[1].Data)
+}
+
+func TestManager_WatchLogsMatchAllWhenProcessIDEmpty(t *testing.T) {
+	m := &Manager{}
+
+	ch, unregister := m.WatchLogs("")
+	defer unregister()
+
+	m.emitLogChunk("a", 0, []byte("A"))
+	m.emitLogChunk("b", 0, []byte("B"))
+
+	var got []string
+	timeout := time.After(500 * time.Millisecond)
+	for len(got) < 2 {
+		select {
+		case c := <-ch:
+			got = append(got, c.ProcessID)
+		case <-timeout:
+			t.Fatalf("timed out, got %v", got)
+		}
+	}
+
+	require.ElementsMatch(t, []string{"a", "b"}, got)
+}
+
+func TestManager_WatchLogsUnregisterClosesChannel(t *testing.T) {
+	m := &Manager{}
+
+	ch, unregister := m.WatchLogs("p1")
+	unregister()
+
+	// After unregister the channel should be closed so a receive
+	// returns (zero, false) rather than blocking forever.
+	select {
+	case _, ok := <-ch:
+		require.False(t, ok, "channel should be closed after unregister")
+	case <-time.After(100 * time.Millisecond):
+		t.Fatal("receive should return immediately on a closed channel")
+	}
 }

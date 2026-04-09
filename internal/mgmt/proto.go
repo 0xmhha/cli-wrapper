@@ -56,10 +56,18 @@ type StopRequestPayload struct {
 	ID string `msgpack:"id"`
 }
 
-// LogsRequestPayload asks for the ring-buffer snapshot of a process.
+// LogsRequestPayload asks for log output from a process.
+//
+// If Follow is false (the default), the server returns a single
+// MsgLogsStream frame with EOF=true containing the current ring-buffer
+// snapshot. If Follow is true, the server first sends the snapshot
+// with EOF=false and then keeps the connection open, pushing
+// additional MsgLogsStream frames (also EOF=false) as new chunks
+// arrive, until the client disconnects or the manager shuts down.
 type LogsRequestPayload struct {
 	ID     string `msgpack:"id"`
 	Stream uint8  `msgpack:"s"`
+	Follow bool   `msgpack:"f"`
 }
 
 // LogsStreamPayload carries a single chunk of streamed log bytes.

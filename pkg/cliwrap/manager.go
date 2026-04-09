@@ -106,6 +106,11 @@ func (m *Manager) Shutdown(ctx context.Context) error {
 	}
 
 	m.watchWG.Wait()
+	// Close any follow-mode log watchers so server-side streaming
+	// handlers see their channels close and exit cleanly. Must happen
+	// before bus.Close() so a final log-overflow event can still land
+	// on the bus if needed.
+	m.closeLogWatchers()
 	if m.bus != nil {
 		m.bus.Close()
 	}

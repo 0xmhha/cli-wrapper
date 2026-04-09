@@ -20,6 +20,16 @@
   `MsgEventsSubscribe`, the server keeps the connection open and
   pushes `MsgEventsStream` frames from the Manager's event bus until
   either side closes.
+- `cliwrap logs --follow` / `-f` live tail mode. After printing the
+  current ring-buffer snapshot, the command keeps the connection
+  open and prints each new log chunk as it arrives, until the user
+  interrupts with ctrl-c or the manager shuts down. Follow mode
+  requires a single stream (`--stream stdout` or `--stream stderr`)
+  because one mgmt connection corresponds to one server-side
+  subscription. The Manager gains a public `WatchLogs(processID)`
+  API returning a buffered channel of `LogChunk` values and an
+  unregister function; this is the underlying primitive that also
+  drives the mgmt server's follow handler.
 
 ## [0.1.1] - 2026-04-08
 

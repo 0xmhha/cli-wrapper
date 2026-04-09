@@ -53,7 +53,7 @@ func main() {
 		fmt.Println("  list                           list supervised processes")
 		fmt.Println("  status     <id>                show one process's status")
 		fmt.Println("  stop       <id>                ask a process to stop")
-		fmt.Println("  logs       [--stream s] <id>   show a process's log snapshot")
+		fmt.Println("  logs       [--stream s] [-f] <id>  show or follow a process's log output")
 		fmt.Println("  events     [--process ids]     stream lifecycle events")
 		fmt.Println("  version                        print the cliwrap version")
 		exit = 0
