@@ -113,17 +113,32 @@ func (s *Server) handleConn(conn net.Conn) {
 			return
 		}
 
-		// MsgLogsRequest with Follow=true is also a streaming upgrade.
-		// The snapshot frame is sent first (EOF=false in follow mode,
-		// EOF=true in snapshot mode), then in follow mode the server
-		// keeps pushing frames from Manager.WatchLogs until client
-		// disconnect or manager shutdown.
+		// MsgLogsRequest is handled inline (both snapshot and follow
+		// modes) to avoid decoding the payload twice — once here to
+		// inspect the Follow flag, and again in handleRequest for
+		// the snapshot case. Follow mode is a streaming upgrade and
+		// hard-returns from handleConn; snapshot mode writes a
+		// single EOF=true frame and loops back to the reader.
 		if h.MsgType == MsgLogsRequest {
 			var req LogsRequestPayload
-			if derr := ipc.DecodePayload(body, &req); derr == nil && req.Follow {
-				s.handleLogsFollow(writer, req)
-				return
+			if derr := ipc.DecodePayload(body, &req); derr == nil {
+				if req.Follow {
+					s.handleLogsFollow(writer, req)
+					return
+				}
+				snap := s.opts.Manager.LogsSnapshot(req.ID, req.Stream)
+				if werr := writeLogsStreamFrame(writer, LogsStreamPayload{
+					ID:     req.ID,
+					Stream: req.Stream,
+					Data:   snap,
+					EOF:    true,
+				}); werr != nil {
+					return
+				}
+				continue
 			}
+			// decode failed — fall through to handleRequest, which
+			// will emit a default error response frame.
 		}
 
 		resp, respType, rerr := s.handleRequest(h, body)
@@ -200,6 +215,24 @@ func summarizeEvent(e event.Event) string {
 // handleConn immediately after this function returns — otherwise the
 // request-response loop would double-handle the connection.
 func (s *Server) handleLogsFollow(writer *ipc.FrameWriter, req LogsRequestPayload) {
+	// Defensive validation: the CLI client rejects Stream>1 before
+	// sending, but a raw wire-level client could still send junk.
+	// Without this guard, WatchLogs would subscribe normally, the
+	// stream-filter `chunk.Stream != req.Stream` on line below
+	// would drop every chunk forever, and the handler would hold
+	// the subscription + connection open indefinitely — a resource
+	// leak. Close the stream early with an error payload instead.
+	if req.Stream > 1 {
+		errPayload := LogsStreamPayload{
+			ID:     req.ID,
+			Stream: req.Stream,
+			Data:   fmt.Appendf(nil, "cliwrap: invalid stream id %d (want 0 or 1)\n", req.Stream),
+			EOF:    true,
+		}
+		_ = writeLogsStreamFrame(writer, errPayload)
+		return
+	}
+
 	// Step 1: send the current ring-buffer snapshot.
 	snap := s.opts.Manager.LogsSnapshot(req.ID, req.Stream)
 	snapPayload := LogsStreamPayload{
@@ -275,17 +308,10 @@ func (s *Server) handleRequest(h ipc.Header, body []byte) (any, ipc.MsgType, err
 			resp.Err = err.Error()
 		}
 		return resp, MsgStatusResponse, nil
-	case MsgLogsRequest:
-		var req LogsRequestPayload
-		_ = ipc.DecodePayload(body, &req)
-		data := s.opts.Manager.LogsSnapshot(req.ID, req.Stream)
-		resp := LogsStreamPayload{
-			ID:     req.ID,
-			Stream: req.Stream,
-			Data:   data,
-			EOF:    true,
-		}
-		return resp, MsgLogsStream, nil
+	// MsgLogsRequest is handled inline in handleConn (both snapshot
+	// and follow modes) to avoid decoding the payload twice. If
+	// handleRequest ever sees a MsgLogsRequest it means the inline
+	// decode failed — fall through to the default error response.
 	default:
 		return StatusResponsePayload{Err: fmt.Sprintf("unknown request type 0x%02x", h.MsgType)}, MsgStatusResponse, nil
 	}

@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"net"
 	"os"
 
 	"github.com/0xmhha/cli-wrapper/internal/ipc"
@@ -118,12 +119,19 @@ func followOneStream(cli *mgmt.Client, id string, stream uint8) int {
 	for {
 		h, body, err := cli.ReadFrame()
 		if err != nil {
-			if errors.Is(err, io.EOF) {
+			// Clean termination signals: the server closed its side
+			// (EOF / ErrUnexpectedEOF) or our deferred cli.Close
+			// closed the socket from underneath us (ErrClosed).
+			// Everything else is a real transport or protocol
+			// failure that the user and any shell pipeline need to
+			// see — do NOT silently swallow it.
+			if errors.Is(err, io.EOF) ||
+				errors.Is(err, io.ErrUnexpectedEOF) ||
+				errors.Is(err, net.ErrClosed) {
 				return 0
 			}
-			// Clean termination on other transport-close errors
-			// (e.g. the underlying conn was closed via cli.Close).
-			return 0
+			fmt.Fprintf(os.Stderr, "cliwrap logs: read: %v\n", err)
+			return 1
 		}
 		if h.MsgType != mgmt.MsgLogsStream {
 			fmt.Fprintf(os.Stderr, "cliwrap logs: unexpected message type 0x%02x\n", h.MsgType)

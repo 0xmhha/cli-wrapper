@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"strings"
 	"time"
@@ -42,13 +43,19 @@ func eventsCommand(args []string) int {
 	for {
 		h, body, err := cli.ReadFrame()
 		if err != nil {
-			if errors.Is(err, io.EOF) {
+			// Clean termination signals: the server closed its side
+			// (EOF / ErrUnexpectedEOF) or our deferred cli.Close
+			// closed the socket from underneath us (ErrClosed).
+			// Everything else is a real transport or protocol
+			// failure that the user and any shell pipeline need to
+			// see — do NOT silently swallow it.
+			if errors.Is(err, io.EOF) ||
+				errors.Is(err, io.ErrUnexpectedEOF) ||
+				errors.Is(err, net.ErrClosed) {
 				return 0
 			}
-			// A closed connection on the client side (e.g. user ctrl-c
-			// triggering Close via deferred cli.Close) can return a
-			// network-level error. Treat it as clean termination.
-			return 0
+			fmt.Fprintf(os.Stderr, "cliwrap events: read: %v\n", err)
+			return 1
 		}
 		if h.MsgType != mgmt.MsgEventsStream {
 			fmt.Fprintf(os.Stderr, "cliwrap events: unexpected message type 0x%02x\n", h.MsgType)

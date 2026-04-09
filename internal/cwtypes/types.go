@@ -179,13 +179,18 @@ func (e *SpecValidationError) Is(target error) bool {
 }
 
 // LogChunk is one chunk of streamed log data delivered to a
-// follow-mode watcher. Data is a defensively-copied byte slice owned
-// by the receiver; the producer copies before send so multiple
-// subscribers can safely hold concurrent references.
+// follow-mode watcher.
+//
+// Data is a SHARED byte slice — the producer copies it once and
+// fans the same slice out to every matching subscriber. Receivers
+// MUST NOT mutate Data (no in-place sort, no append that grows in
+// place, no lowercase conversion, etc.), because any mutation would
+// corrupt the slice for other concurrent subscribers. A receiver
+// that needs to modify the bytes must make its own copy first.
 //
 // This type lives in cwtypes (rather than pkg/cliwrap) so
-// internal/mgmt can refer to it without creating an import cycle with
-// pkg/cliwrap. pkg/cliwrap re-exports it as a type alias.
+// internal/mgmt can refer to it without creating an import cycle
+// with pkg/cliwrap. pkg/cliwrap re-exports it as a type alias.
 type LogChunk struct {
 	ProcessID string
 	Stream    uint8 // 0=stdout, 1=stderr

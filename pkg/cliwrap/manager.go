@@ -106,10 +106,13 @@ func (m *Manager) Shutdown(ctx context.Context) error {
 	}
 
 	m.watchWG.Wait()
-	// Close any follow-mode log watchers so server-side streaming
-	// handlers see their channels close and exit cleanly. Must happen
-	// before bus.Close() so a final log-overflow event can still land
-	// on the bus if needed.
+	// Release any server-side follow handlers blocked on WatchLogs
+	// channels so they can exit cleanly before we tear down the
+	// rest of the manager. Done before bus.Close() so the ordering
+	// between log-watcher shutdown and event-bus shutdown stays
+	// symmetrical with the ordering in which they were lazily
+	// constructed (collector first via emitLogChunk, then the bus
+	// via Events()/watchLoop).
 	m.closeLogWatchers()
 	if m.bus != nil {
 		m.bus.Close()
