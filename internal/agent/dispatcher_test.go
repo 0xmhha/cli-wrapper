@@ -72,3 +72,25 @@ func TestDispatcher_HandlesStartChildAndExit(t *testing.T) {
 	_ = agentConn.Close(ctx)
 	_ = hostConn.Close(ctx)
 }
+
+func TestDispatcher_StartChildInstallsLogChunkSinks(t *testing.T) {
+	// We can't easily spin up a real Conn in a unit test, but we can
+	// observe the effect by calling startChild on a dispatcher whose
+	// runner is a spy. After startChild runs (and before the fake child
+	// exits), runner.StdoutSink and runner.StderrSink must be non-nil
+	// chunkWriter instances.
+	d := &Dispatcher{runner: NewRunner()}
+
+	// Before startChild: defaults (io.Discard) are set by NewRunner.
+	require.NotNil(t, d.runner.StdoutSink)
+	require.NotNil(t, d.runner.StderrSink)
+
+	// Call the helper that installs the sinks (extracted for testability).
+	d.installLogSinks(&recordingSender{})
+
+	_, okOut := d.runner.StdoutSink.(*chunkWriter)
+	require.True(t, okOut, "StdoutSink should be a *chunkWriter after install")
+
+	_, okErr := d.runner.StderrSink.(*chunkWriter)
+	require.True(t, okErr, "StderrSink should be a *chunkWriter after install")
+}

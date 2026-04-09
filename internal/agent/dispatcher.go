@@ -60,6 +60,8 @@ func (d *Dispatcher) startChild(p ipc.StartChildPayload) {
 	d.cancelFn = cancel
 	d.mu.Unlock()
 
+	d.installLogSinks(d)
+
 	d.wg.Add(1)
 	go func() {
 		defer d.wg.Done()
@@ -118,6 +120,14 @@ func (d *Dispatcher) clearRunning() {
 	d.cancelFn = nil
 	d.runningPID = 0
 	d.mu.Unlock()
+}
+
+// installLogSinks replaces the runner's default io.Discard sinks with
+// chunkWriter instances that forward bytes to the host via MsgLogChunk.
+// Extracted from startChild so it can be unit-tested without a real Conn.
+func (d *Dispatcher) installLogSinks(sender chunkSender) {
+	d.runner.StdoutSink = newChunkWriter(sender, 0) // 0 = stdout
+	d.runner.StderrSink = newChunkWriter(sender, 1) // 1 = stderr
 }
 
 // SendControl serializes payload and enqueues it as an outbound frame.
