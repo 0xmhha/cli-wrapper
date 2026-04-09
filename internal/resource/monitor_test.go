@@ -40,8 +40,15 @@ func TestMonitor_PollsAndStops(t *testing.T) {
 	})
 
 	m.Start()
-	time.Sleep(80 * time.Millisecond)
+	// Use Eventually instead of a fixed Sleep so the test is
+	// deterministic under slow schedulers. A fixed 80ms sleep
+	// with 20ms ticks is a race: on loaded CI runners the first
+	// tick may arrive late enough that only 1 sample lands before
+	// Stop is called. Eventually waits up to 2 s for the second
+	// sample and exits immediately once it's observed.
+	require.Eventually(t, func() bool {
+		return samples.Load() >= 2
+	}, 2*time.Second, 10*time.Millisecond,
+		"monitor should produce at least 2 samples at 20ms interval")
 	m.Stop()
-
-	require.GreaterOrEqual(t, samples.Load(), int64(2))
 }
