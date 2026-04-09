@@ -46,6 +46,16 @@ func main() {
 		exit = 0
 	case "-h", "--help", "help":
 		fmt.Println("cliwrap: manage background CLI processes")
+		fmt.Println("")
+		fmt.Println("Commands:")
+		fmt.Println("  run        -f config.yaml      start all processes in a config")
+		fmt.Println("  validate   -f config.yaml      check a config without running")
+		fmt.Println("  list                           list supervised processes")
+		fmt.Println("  status     <id>                show one process's status")
+		fmt.Println("  stop       <id>                ask a process to stop")
+		fmt.Println("  logs       [--stream s] <id>   show a process's log snapshot")
+		fmt.Println("  events                         stream events (not yet implemented)")
+		fmt.Println("  version                        print the cliwrap version")
 		exit = 0
 	default:
 		fmt.Fprintf(os.Stderr, "cliwrap: unknown command %q\n", cmd)

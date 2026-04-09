@@ -1,5 +1,16 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- `cliwrap logs <id>` now prints the current stdout/stderr ring-buffer
+  contents for a supervised process. Use `--stream stdout|stderr|all`
+  to filter (default: `all`, which prints stdout followed by stderr).
+  This is a snapshot command — `--follow` is not yet implemented.
+  Under the hood, the agent now tees child stdout/stderr into
+  `MsgLogChunk` IPC frames; the host Manager owns a `logcollect.Collector`
+  with a 1 MiB per-stream ring buffer per process.
+
 ## [0.1.1] - 2026-04-08
 
 First release with published binaries. The `v0.1.0` tag was created
@@ -56,7 +67,7 @@ binaries are attached to its GitHub Release (see note under v0.1.1).
 - Heartbeats, unified crash info, restart loop, EventBus wiring, chaos tests, CI matrix (Plan 05).
 
 ### Known Limitations
-- `cliwrap logs` and `cliwrap events` streaming is not yet implemented.
+- `cliwrap events` streaming is not yet implemented.
 - Sandbox providers other than `noop` and `scriptdir` ship as external modules.
 - cgroups v2 throttling is not yet wired.
 - Windows is not supported.
