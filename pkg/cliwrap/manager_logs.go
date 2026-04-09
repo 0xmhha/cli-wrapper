@@ -46,10 +46,9 @@ func (m *Manager) emitLogChunk(processID string, stream uint8, data []byte) {
 	})
 }
 
-// LogsSnapshot returns the current ring-buffer contents for the given
-// (processID, stream). Returns nil if no bytes have been recorded for
-// that pair.
-func (m *Manager) LogsSnapshot(processID string, stream uint8) []byte {
+// logsSnapshotImpl is the internal backing implementation used by the
+// mgmt API wrapper in mgmt_api.go.
+func (m *Manager) logsSnapshotImpl(processID string, stream uint8) []byte {
 	// Read through ensureCollector so the first caller (typically a
 	// mgmt client asking for logs of a process that hasn't written
 	// anything yet) still sees nil instead of a panic.

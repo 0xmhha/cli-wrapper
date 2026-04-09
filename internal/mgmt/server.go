@@ -20,6 +20,7 @@ type ManagerAPI interface {
 	List() []ListEntry
 	StatusOf(id string) (ListEntry, error)
 	Stop(ctx context.Context, id string) error
+	LogsSnapshot(id string, stream uint8) []byte
 }
 
 // ServerOptions configures the management server.
@@ -134,6 +135,17 @@ func (s *Server) handleRequest(h ipc.Header, body []byte) (any, ipc.MsgType, err
 			resp.Err = err.Error()
 		}
 		return resp, MsgStatusResponse, nil
+	case MsgLogsRequest:
+		var req LogsRequestPayload
+		_ = ipc.DecodePayload(body, &req)
+		data := s.opts.Manager.LogsSnapshot(req.ID, req.Stream)
+		resp := LogsStreamPayload{
+			ID:     req.ID,
+			Stream: req.Stream,
+			Data:   data,
+			EOF:    true,
+		}
+		return resp, MsgLogsStream, nil
 	default:
 		return StatusResponsePayload{Err: fmt.Sprintf("unknown request type 0x%02x", h.MsgType)}, MsgStatusResponse, nil
 	}

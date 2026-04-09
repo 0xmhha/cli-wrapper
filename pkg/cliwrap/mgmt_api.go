@@ -41,6 +41,15 @@ func (m *Manager) Stop(ctx context.Context, id string) error {
 	return h.Stop(ctx)
 }
 
+// LogsSnapshot is the mgmt API entry that returns the current ring-buffer
+// contents for a (process, stream) pair. Returns nil if no logs have been
+// recorded for that pair yet.
+func (m *Manager) LogsSnapshot(id string, stream uint8) []byte {
+	// Thin wrapper — the real implementation lives in manager_logs.go
+	// where the Collector access is co-located with the write path.
+	return m.logsSnapshotImpl(id, stream)
+}
+
 func toListEntry(h *processHandle) mgmt.ListEntry {
 	st := h.Status()
 	return mgmt.ListEntry{
