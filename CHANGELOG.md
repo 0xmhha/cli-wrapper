@@ -2,34 +2,109 @@
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-04-09
+
+Observability release. Three user-facing subcommands — `cliwrap logs`
+snapshot, `cliwrap logs --follow` live tail, and `cliwrap events`
+streaming — are now fully wired end-to-end through the agent, IPC,
+manager, mgmt server, and CLI client. The mgmt protocol gains a
+"streaming upgrade" pattern that the two follow-mode commands share:
+after an initial request, the server keeps the connection open and
+pushes frames until the client disconnects or the manager shuts down.
+
 ### Added
-- `cliwrap logs <id>` now prints the current stdout/stderr ring-buffer
+
+- `cliwrap logs <id>` prints the current stdout/stderr ring-buffer
   contents for a supervised process. Use `--stream stdout|stderr|all`
   to filter (default: `all`, which prints stdout followed by stderr).
-  This is a snapshot command — `--follow` is not yet implemented.
   Under the hood, the agent now tees child stdout/stderr into
-  `MsgLogChunk` IPC frames; the host Manager owns a `logcollect.Collector`
-  with a 1 MiB per-stream ring buffer per process.
-- `cliwrap events` now streams lifecycle events (process started,
-  stopped, crashed, etc.) from a running manager over the mgmt
-  socket. Use `--process <id,id,...>` to filter by process id; empty
-  means "all processes". Events are printed in
-  `HH:MM:SS.mmm  event.type  process.id  summary` format, one per
-  line, until the client disconnects (ctrl-c) or the manager shuts
-  down. The mgmt protocol gains a streaming upgrade: after receiving
-  `MsgEventsSubscribe`, the server keeps the connection open and
-  pushes `MsgEventsStream` frames from the Manager's event bus until
-  either side closes.
+  `MsgLogChunk` IPC frames; the host `Manager` owns a
+  `logcollect.Collector` with a 1 MiB per-stream ring buffer per
+  process.
+
 - `cliwrap logs --follow` / `-f` live tail mode. After printing the
   current ring-buffer snapshot, the command keeps the connection
   open and prints each new log chunk as it arrives, until the user
   interrupts with ctrl-c or the manager shuts down. Follow mode
   requires a single stream (`--stream stdout` or `--stream stderr`)
   because one mgmt connection corresponds to one server-side
-  subscription. The Manager gains a public `WatchLogs(processID)`
+  subscription. The `Manager` gains a public `WatchLogs(processID)`
   API returning a buffered channel of `LogChunk` values and an
   unregister function; this is the underlying primitive that also
   drives the mgmt server's follow handler.
+
+- `cliwrap events` streams lifecycle events (process started,
+  stopped, crashed, etc.) from a running manager over the mgmt
+  socket. Use `--process <id,id,...>` to filter by process id;
+  empty means "all processes". Events are printed in
+  `HH:MM:SS.mmm  event.type  process.id  summary` format, one per
+  line, until the client disconnects (ctrl-c) or the manager shuts
+  down.
+
+- Mgmt protocol: streaming upgrade pattern. After receiving
+  `MsgEventsSubscribe` or `MsgLogsRequest` with `Follow=true`, the
+  server dedicates the connection to the stream and pushes
+  `MsgEventsStream` / `MsgLogsStream` frames from either the
+  `Manager.Events()` bus or the new `Manager.WatchLogs` channel
+  until either side closes. `LogsRequestPayload` gains a `Follow bool`
+  field; `EventsSubscribePayload` gains a `ProcessIDs []string`
+  filter; the existing `EventsStreamPayload` schema is unchanged.
+
+- `internal/mgmt.Client` gains `Stream(t, payload)` and `ReadFrame()`
+  methods to drain an arbitrary number of frames after sending a
+  single streaming-upgrade request.
+
+### Fixed
+
+- CI `unit` job now runs `make fixtures` before `go test ./...`,
+  so integration tests that shell out to `test/fixtures/bin/`
+  binaries work correctly in CI. Previously the binaries did not
+  exist in the unit matrix, and most integration tests accidentally
+  passed because they expected `StateCrashed` from a failing
+  `exec.Command` — the new `cliwrap logs` integration test exposed
+  the hole by expecting `StateRunning`, which requires a real
+  executable child.
+
+- `TestIntegration_LogsSnapshotCapturesChildOutput` stabilized by
+  splitting the single `require.Eventually` into two phases
+  (wait for `StateRunning`, then wait for log content) with
+  generous 10 s budgets each, and by moving `mgr.Shutdown` into a
+  deferred closure with its own fresh context so a fatal Eventually
+  no longer leaks goroutines into sibling tests. 20/20 green under
+  `-race` locally.
+
+- `TestChaos_WALReplayAfterDisconnect` stabilized by sending a
+  200-message burst immediately before `Close` instead of relying
+  on a 5-message race with the receiver. The large burst guarantees
+  the WAL still holds unacked entries regardless of scheduler
+  timing. 20/20 green under `-race` locally.
+
+- `TestMonitor_PollsAndStops` stabilized by replacing a fixed
+  80 ms `time.Sleep` with `require.Eventually(..., 2*time.Second,
+  10*time.Millisecond)`, so the test waits for the actual
+  observable condition instead of a wall-clock budget. 20/20
+  green under `-race` locally.
+
+- `cliwrap events` and `cliwrap logs --follow` no longer silently
+  swallow non-EOF transport errors as exit 0. Only `io.EOF`,
+  `io.ErrUnexpectedEOF`, and `net.ErrClosed` are treated as clean
+  termination; all other read errors print to stderr and return
+  exit 1, so shells and CI pipelines can react.
+
+### Changed
+
+- Mgmt server `handleLogsFollow` rejects `req.Stream > 1` with an
+  inline error frame instead of subscribing to `WatchLogs` and
+  silently dropping every chunk (which would leak the subscription
+  and the connection).
+- Mgmt server `handleConn` now handles `MsgLogsRequest` inline
+  (both snapshot and follow modes) to avoid decoding the payload
+  twice. The dead `MsgLogsRequest` case in `handleRequest` has
+  been removed.
+- `LogChunk` struct moved from `pkg/cliwrap` into `internal/cwtypes`
+  to break a potential `internal/mgmt` → `pkg/cliwrap` import cycle.
+  `pkg/cliwrap` re-exports it as a type alias, so public callers
+  still see `cliwrap.LogChunk`.
 
 ## [0.1.1] - 2026-04-08
 
