@@ -24,6 +24,13 @@ type ControllerOptions struct {
 	Spec       cwtypes.Spec
 	Spawner    *supervise.Spawner
 	RuntimeDir string
+
+	// OnLogChunk is invoked for every inbound ipc.MsgLogChunk frame.
+	// The callback runs on the ipc.Conn dispatch goroutine, so it must
+	// not block for long. Callers that need to do heavy work should
+	// hand the data off to a separate goroutine. May be nil, in which
+	// case log chunks are dropped.
+	OnLogChunk func(stream uint8, data []byte)
 }
 
 // Controller manages exactly one agent subprocess and its child.
@@ -167,5 +174,14 @@ func (c *Controller) handleMessage(msg ipc.OutboxMessage) {
 		}
 	case ipc.MsgChildError:
 		c.state.Store(int32(cwtypes.StateCrashed))
+	case ipc.MsgLogChunk:
+		if c.opts.OnLogChunk == nil {
+			return
+		}
+		var p ipc.LogChunkPayload
+		if err := ipc.DecodePayload(msg.Payload, &p); err != nil {
+			return
+		}
+		c.opts.OnLogChunk(p.Stream, p.Data)
 	}
 }
