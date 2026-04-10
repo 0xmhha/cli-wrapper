@@ -112,7 +112,7 @@ func (m *Manager) emitLogChunk(processID string, stream uint8, data []byte) {
 //
 // The channel is buffered; emit-side fan-out is non-blocking, so slow
 // consumers lose chunks rather than backpressuring the producer.
-func (m *Manager) WatchLogs(processID string) (<-chan LogChunk, func()) {
+func (m *Manager) WatchLogs(processID string) (chunks <-chan LogChunk, unregister func()) {
 	w := &logWatcher{
 		processID: processID,
 		ch:        make(chan LogChunk, 256),
@@ -121,7 +121,7 @@ func (m *Manager) WatchLogs(processID string) (<-chan LogChunk, func()) {
 	m.logs.watchers = append(m.logs.watchers, w)
 	m.logs.watchersMu.Unlock()
 
-	unregister := func() {
+	unregister = func() {
 		m.logs.watchersMu.Lock()
 		defer m.logs.watchersMu.Unlock()
 		for i, x := range m.logs.watchers {
@@ -132,7 +132,8 @@ func (m *Manager) WatchLogs(processID string) (<-chan LogChunk, func()) {
 			}
 		}
 	}
-	return w.ch, unregister
+	chunks = w.ch
+	return
 }
 
 // closeLogWatchers closes every registered log watcher's channel.
