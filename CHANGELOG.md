@@ -162,7 +162,6 @@ binaries are attached to its GitHub Release (see note under v0.1.1).
 - Heartbeats, unified crash info, restart loop, EventBus wiring, chaos tests, CI matrix (Plan 05).
 
 ### Known Limitations
-- `cliwrap events` streaming is not yet implemented.
 - Sandbox providers other than `noop` and `scriptdir` ship as external modules.
 - cgroups v2 throttling is not yet wired.
 - Windows is not supported.
