@@ -134,10 +134,13 @@ func (d *Dispatcher) clearRunning() {
 
 // installLogSinks replaces the runner's default io.Discard sinks with
 // chunkWriter instances that forward bytes to the host via MsgLogChunk.
+// It also configures the runner's PTY sender so MsgTypePTYData frames are
+// routed through the same IPC path.
 // Extracted from startChild so it can be unit-tested without a real Conn.
 func (d *Dispatcher) installLogSinks(sender chunkSender) {
 	d.runner.StdoutSink = newChunkWriter(sender, 0) // 0 = stdout
 	d.runner.StderrSink = newChunkWriter(sender, 1) // 1 = stderr
+	d.runner.SetSender(sender)
 }
 
 // SendControl serializes payload and enqueues it as an outbound frame.
