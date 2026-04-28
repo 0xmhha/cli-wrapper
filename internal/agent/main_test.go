@@ -6,7 +6,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"go.uber.org/goleak"
 )
+
+func TestMain(m *testing.M) { goleak.VerifyTestMain(m) }
 
 func TestDefaultConfig(t *testing.T) {
 	cfg := DefaultConfig()

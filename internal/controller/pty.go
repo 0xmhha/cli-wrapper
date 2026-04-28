@@ -52,13 +52,14 @@ func (ps *ptySubscribers) remove(target *ptySubscriber) {
 }
 
 func (ps *ptySubscribers) fanOut(d PTYData) {
+	// Hold the mutex for the full fan-out. Each send is non-blocking (select
+	// with default) so lock hold time is O(n) constant-time operations.
+	// Holding during sends is required to prevent a concurrent remove from
+	// closing a channel while fanOut is sending to it (data race).
 	ps.mu.Lock()
-	// Snapshot under lock to avoid holding it during channel sends.
-	subs := make([]*ptySubscriber, len(ps.list))
-	copy(subs, ps.list)
-	ps.mu.Unlock()
+	defer ps.mu.Unlock()
 
-	for _, s := range subs {
+	for _, s := range ps.list {
 		// Non-blocking: a full channel drops the chunk for this subscriber.
 		select {
 		case s.ch <- d:
