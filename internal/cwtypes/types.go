@@ -118,6 +118,29 @@ type Spec struct {
 	Sandbox        *SandboxSpec
 	Resources      ResourceLimits
 	LogOptions     LogOptions
+	PTY            *PTYConfig `yaml:"pty,omitempty"`
+}
+
+// PTYConfig holds pseudo-terminal configuration for a managed process.
+type PTYConfig struct {
+	InitialCols uint16 `yaml:"initial_cols"`
+	InitialRows uint16 `yaml:"initial_rows"`
+	Echo        bool   `yaml:"echo"`
+}
+
+// ApplyPTYDefaults fills in zero-valued fields of c with sensible defaults.
+// It is a no-op when c is nil.
+func ApplyPTYDefaults(c *PTYConfig) error {
+	if c == nil {
+		return nil
+	}
+	if c.InitialCols == 0 {
+		c.InitialCols = 80
+	}
+	if c.InitialRows == 0 {
+		c.InitialRows = 24
+	}
+	return nil
 }
 
 // Status is a snapshot of the runtime state.

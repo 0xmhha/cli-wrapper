@@ -21,7 +21,12 @@ type (
 	Spec                = cwtypes.Spec
 	Status              = cwtypes.Status
 	SpecValidationError = cwtypes.SpecValidationError
+	PTYConfig           = cwtypes.PTYConfig
 )
+
+// ApplyPTYDefaults re-exports cwtypes.ApplyPTYDefaults so callers need
+// only import pkg/cliwrap.
+var ApplyPTYDefaults = cwtypes.ApplyPTYDefaults
 
 // Re-exported constants.
 const (

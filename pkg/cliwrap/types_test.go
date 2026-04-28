@@ -41,6 +41,27 @@ func TestSpec_Validate_MissingCommand(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestSpec_PTYDefaultsZero(t *testing.T) {
+	s := Spec{Command: "bash"}
+	require.Nil(t, s.PTY)
+}
+
+func TestPTYConfig_DefaultsApplied(t *testing.T) {
+	c := PTYConfig{} // zero
+	require.NoError(t, ApplyPTYDefaults(&c))
+	require.Equal(t, uint16(80), c.InitialCols)
+	require.Equal(t, uint16(24), c.InitialRows)
+	require.False(t, c.Echo)
+}
+
+func TestPTYConfig_RespectsExplicitValues(t *testing.T) {
+	c := PTYConfig{InitialCols: 132, InitialRows: 50, Echo: true}
+	require.NoError(t, ApplyPTYDefaults(&c))
+	require.Equal(t, uint16(132), c.InitialCols)
+	require.Equal(t, uint16(50), c.InitialRows)
+	require.True(t, c.Echo)
+}
+
 func TestState_String(t *testing.T) {
 	cases := []struct {
 		s State
