@@ -4,6 +4,7 @@ package agent
 
 import (
 	"context"
+	"os"
 	"sync"
 	"time"
 
@@ -46,6 +47,15 @@ func (d *Dispatcher) Handle(msg ipc.OutboxMessage) {
 		_ = d.SendControl(ipc.MsgPong, nil, false)
 	case ipc.MsgShutdown:
 		d.stopChild(5 * time.Second)
+	case ipc.MsgTypeCapabilityQuery:
+		// CLIWRAP_AGENT_NO_CAPABILITY=1 skips the reply, simulating an older
+		// agent that does not know this message type (test-only escape hatch
+		// for Task 19).
+		if os.Getenv("CLIWRAP_AGENT_NO_CAPABILITY") == "1" {
+			return
+		}
+		reply := BuildCapabilityReply()
+		_ = d.SendControl(ipc.MsgTypeCapabilityReply, reply, false)
 	}
 }
 
