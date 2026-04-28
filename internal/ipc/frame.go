@@ -59,6 +59,18 @@ const (
 	MsgResume      MsgType = 0x0B
 )
 
+// PTY mode (host -> agent).
+const (
+	MsgTypePTYWrite        MsgType = 0x20
+	MsgTypePTYResize       MsgType = 0x22
+	MsgTypePTYSignal       MsgType = 0x23
+)
+
+// Capability handshake (host -> agent).
+const (
+	MsgTypeCapabilityQuery MsgType = 0x30
+)
+
 // Data-plane message types (agent -> host).
 const (
 	MsgHelloAck       MsgType = 0x81
@@ -72,6 +84,39 @@ const (
 	MsgAgentFatal     MsgType = 0x89
 	MsgAckData        MsgType = 0x8A // agent ACKs a control-plane message
 )
+
+// PTY mode (agent -> host).
+const (
+	MsgTypePTYData MsgType = 0x90
+)
+
+// Capability handshake (agent -> host).
+const (
+	MsgTypeCapabilityReply MsgType = 0xB0
+)
+
+// AllMessageTypes returns every registered MsgType value.
+// Used by tests to detect duplicate registrations.
+func AllMessageTypes() []MsgType {
+	return []MsgType{
+		// Control-plane (host -> agent)
+		MsgHello, MsgStartChild, MsgStopChild, MsgSignalChild,
+		MsgWriteStdin, MsgSetLogLevel, MsgPing, MsgShutdown,
+		MsgAckControl, MsgResume,
+		// PTY mode (host -> agent)
+		MsgTypePTYWrite, MsgTypePTYResize, MsgTypePTYSignal,
+		// Capability handshake (host -> agent)
+		MsgTypeCapabilityQuery,
+		// Data-plane (agent -> host)
+		MsgHelloAck, MsgChildStarted, MsgChildExited, MsgLogChunk,
+		MsgLogFileRef, MsgChildError, MsgPong, MsgResourceSample,
+		MsgAgentFatal, MsgAckData,
+		// PTY mode (agent -> host)
+		MsgTypePTYData,
+		// Capability handshake (agent -> host)
+		MsgTypeCapabilityReply,
+	}
+}
 
 // Header is the fixed-size frame prefix that precedes every payload.
 type Header struct {
