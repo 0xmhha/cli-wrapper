@@ -3,6 +3,7 @@
 package ipc
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -90,6 +91,41 @@ func TestWAL_EnforcesSizeCap(t *testing.T) {
 		Payload: make([]byte, 1024),
 	})
 	require.ErrorIs(t, err, ErrWALFull)
+}
+
+func TestWAL_ReplaysPTYDataChannelInOrder(t *testing.T) {
+	dir := t.TempDir()
+	wal, err := OpenWAL(dir, 1<<20)
+	require.NoError(t, err)
+	defer func() { _ = wal.Close() }()
+
+	// Interleave MsgLogChunk + MsgTypePTYData on the same seq space.
+	require.NoError(t, wal.Append(OutboxMessage{
+		Header:  Header{MsgType: MsgLogChunk, SeqNo: 1, Length: 4},
+		Payload: []byte("log1"),
+	}))
+	require.NoError(t, wal.Append(OutboxMessage{
+		Header:  Header{MsgType: MsgTypePTYData, SeqNo: 2, Length: 4},
+		Payload: []byte("pty1"),
+	}))
+	require.NoError(t, wal.Append(OutboxMessage{
+		Header:  Header{MsgType: MsgLogChunk, SeqNo: 3, Length: 4},
+		Payload: []byte("log2"),
+	}))
+
+	got, err := wal.Replay()
+	require.NoError(t, err)
+	require.Len(t, got, 3)
+
+	var summaries []string
+	for _, m := range got {
+		summaries = append(summaries, fmt.Sprintf("%d:%d:%s", m.Header.MsgType, m.Header.SeqNo, m.Payload))
+	}
+	require.Equal(t, []string{
+		fmt.Sprintf("%d:1:log1", MsgLogChunk),
+		fmt.Sprintf("%d:2:pty1", MsgTypePTYData),
+		fmt.Sprintf("%d:3:log2", MsgLogChunk),
+	}, summaries)
 }
 
 func TestWAL_FileLayoutIsStable(t *testing.T) {
