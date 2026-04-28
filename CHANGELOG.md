@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+### Added
+- First-class PTY support for child processes via `Spec.PTY`.
+- New IPC messages: `MsgPTYData`, `MsgPTYWrite`, `MsgPTYResize`, `MsgPTYSignal`.
+- Capability negotiation handshake (`MsgCapabilityQuery`/`Reply`); host refuses PTY against incompatible agents with `ErrPTYUnsupportedByAgent`.
+- `ProcessHandle.WriteInput`, `Resize`, `Signal`, `SubscribePTYData`.
+- Log rotator continues to record output regardless of spawn mode (PTY data tees into the existing logcollect pipeline).
+- Integration tests for PTY echo, resize, signal, log persistence, and capability negotiation.
+- Chaos tests for slow PTY consumer, child SIGKILL.
+- Benchmarks for PTY throughput and keystroke round-trip latency.
+
+### Notes
+- The PTY agent crash chaos test (`TestPTY_AgentCrashDetectedWithin5s`) is currently `t.Skip`ed; it requires wiring agent disconnect to the controller crash state machine, which is tracked as a separate follow-up.
+
 ## [0.2.0] - 2026-04-09
 
 Observability release. Three user-facing subcommands — `cliwrap logs`
