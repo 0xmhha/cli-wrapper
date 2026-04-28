@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/0xmhha/cli-wrapper/internal/cwtypes"
 	"github.com/0xmhha/cli-wrapper/internal/ipc"
@@ -40,8 +41,11 @@ type Controller struct {
 	handle *supervise.AgentHandle
 	conn   *ipc.Conn
 
-	mu       sync.Mutex
-	childPID int
+	mu         sync.Mutex
+	childPID   int
+	features   []string      // populated by negotiateCapabilities
+	capReplyCh chan []string  // one-shot channel; closed after negotiation
+
 	closed   atomic.Bool
 	closeErr error
 }
@@ -101,11 +105,32 @@ func (c *Controller) Start(ctx context.Context) error {
 	}
 	c.conn = conn
 
+	// Allocate the one-shot channel before installing the handler so the
+	// handler never races with a nil channel.
+	c.capReplyCh = make(chan []string, 1)
+
 	conn.OnMessage(c.handleMessage)
 	conn.Start()
 
 	// Send HELLO to prompt agent's HELLO_ACK.
 	_ = c.send(ipc.MsgHello, ipc.HelloPayload{ProtocolVersion: ipc.ProtocolVersion, AgentID: c.opts.Spec.ID}, false)
+
+	// Negotiate capabilities before spawning the child. An older agent that
+	// does not understand MsgTypeCapabilityQuery will simply not reply; we
+	// treat a timeout as "no features" for backward compatibility.
+	if err := c.negotiateCapabilities(ctx); err != nil {
+		_ = handle.Close()
+		c.state.Store(int32(cwtypes.StateCrashed))
+		return fmt.Errorf("controller capability negotiation: %w", err)
+	}
+
+	// Refuse PTY mode if the agent does not advertise the "pty" feature.
+	if c.opts.Spec.PTY != nil && !c.AgentSupportsPTY() {
+		_ = handle.Close()
+		c.state.Store(int32(cwtypes.StateCrashed))
+		return cwtypes.ErrPTYUnsupportedByAgent
+	}
+
 	_ = c.send(ipc.MsgStartChild, ipc.StartChildPayload{
 		Command:     c.opts.Spec.Command,
 		Args:        c.opts.Spec.Args,
@@ -140,6 +165,44 @@ func (c *Controller) Close(ctx context.Context) error {
 	return c.closeErr
 }
 
+// negotiateCapabilities sends MsgTypeCapabilityQuery and waits up to 5 s for
+// MsgTypeCapabilityReply. A timeout is treated as "no features" (backward
+// compatibility with agents that pre-date capability negotiation).
+func (c *Controller) negotiateCapabilities(ctx context.Context) error {
+	if err := c.send(ipc.MsgTypeCapabilityQuery, nil, false); err != nil {
+		return err
+	}
+	deadline := time.NewTimer(5 * time.Second)
+	defer deadline.Stop()
+	select {
+	case features, ok := <-c.capReplyCh:
+		if ok {
+			c.mu.Lock()
+			c.features = features
+			c.mu.Unlock()
+		}
+		return nil
+	case <-deadline.C:
+		// Older agent: no capability reply — treat as no features.
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+// AgentSupportsPTY reports whether the connected agent advertised the "pty"
+// feature during capability negotiation.
+func (c *Controller) AgentSupportsPTY() bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	for _, f := range c.features {
+		if f == "pty" {
+			return true
+		}
+	}
+	return false
+}
+
 func (c *Controller) send(t ipc.MsgType, payload any, ack bool) error {
 	var data []byte
 	if payload != nil {
@@ -159,6 +222,18 @@ func (c *Controller) send(t ipc.MsgType, payload any, ack bool) error {
 
 func (c *Controller) handleMessage(msg ipc.OutboxMessage) {
 	switch msg.Header.MsgType {
+	case ipc.MsgTypeCapabilityReply:
+		// Deliver features to negotiateCapabilities via the one-shot channel.
+		// Non-blocking send: if the channel is already closed or full (double
+		// reply), we silently ignore the extra frame.
+		reply, err := ipc.DecodeCapabilityReply(msg.Payload)
+		if err != nil {
+			return
+		}
+		select {
+		case c.capReplyCh <- reply.Features:
+		default:
+		}
 	case ipc.MsgHelloAck:
 		// Handshake complete; nothing to record for now.
 	case ipc.MsgChildStarted:

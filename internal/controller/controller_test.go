@@ -4,6 +4,7 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -81,6 +82,72 @@ func TestController_HandleLogChunkInvokesCallback(t *testing.T) {
 	require.Equal(t, 1, called)
 	require.Equal(t, uint8(1), gotStream)
 	require.Equal(t, []byte("hello stderr"), gotData)
+}
+
+func TestController_NegotiatesPTY(t *testing.T) {
+	defer goleak.VerifyNone(t)
+
+	agentBin := supervise.BuildAgentForTest(t)
+	spawner := supervise.NewSpawner(supervise.SpawnerOptions{AgentPath: agentBin})
+
+	spec := cwtypes.Spec{
+		ID:          "cap-pty-test",
+		Command:     "/bin/sh",
+		Args:        []string{"-c", "exit 0"},
+		StopTimeout: 2 * time.Second,
+	}
+
+	ctrl, err := NewController(ControllerOptions{
+		Spec:       spec,
+		Spawner:    spawner,
+		RuntimeDir: t.TempDir(),
+	})
+	require.NoError(t, err)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	require.NoError(t, ctrl.Start(ctx))
+	require.True(t, ctrl.AgentSupportsPTY(), "expected agent to advertise PTY feature")
+
+	require.NoError(t, ctrl.Close(ctx))
+}
+
+func TestController_RefusesPTYWhenAgentLacksFeature(t *testing.T) {
+	defer goleak.VerifyNone(t)
+
+	agentBin := supervise.BuildAgentForTest(t)
+	// CLIWRAP_AGENT_NO_CAPABILITY=1 makes the agent skip its CapabilityReply,
+	// simulating an older agent that does not understand capability negotiation.
+	spawner := supervise.NewSpawner(supervise.SpawnerOptions{
+		AgentPath: agentBin,
+		ExtraEnv:  []string{"CLIWRAP_AGENT_NO_CAPABILITY=1"},
+	})
+
+	spec := cwtypes.Spec{
+		ID:          "cap-nopt-test",
+		Command:     "/bin/sh",
+		Args:        []string{"-c", "exit 0"},
+		StopTimeout: 2 * time.Second,
+		PTY:         &cwtypes.PTYConfig{InitialCols: 80, InitialRows: 24},
+	}
+
+	ctrl, err := NewController(ControllerOptions{
+		Spec:       spec,
+		Spawner:    spawner,
+		RuntimeDir: t.TempDir(),
+	})
+	require.NoError(t, err)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	err = ctrl.Start(ctx)
+	require.Error(t, err)
+	require.True(t, errors.Is(err, cwtypes.ErrPTYUnsupportedByAgent),
+		"expected ErrPTYUnsupportedByAgent, got: %v", err)
+
+	require.NoError(t, ctrl.Close(ctx))
 }
 
 func TestController_HandleLogChunkWithoutCallbackIsNoop(t *testing.T) {

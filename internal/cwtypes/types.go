@@ -183,6 +183,12 @@ func (s *Spec) Validate() error {
 // ErrInvalidSpec is the sentinel that SpecValidationError.Is maps to.
 var ErrInvalidSpec = errors.New("cliwrap: invalid spec")
 
+// ErrPTYUnsupportedByAgent is returned by Controller.Start when the agent's
+// capability reply does not include the "pty" feature and Spec.PTY is set.
+// Defined here (leaf package) so internal/controller can return it without
+// importing pkg/cliwrap and creating an import cycle.
+var ErrPTYUnsupportedByAgent = errors.New("cliwrap: agent does not support PTY mode")
+
 // SpecValidationError describes a field-level validation failure.
 type SpecValidationError struct {
 	Field  string
