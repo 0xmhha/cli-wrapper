@@ -7,6 +7,7 @@ import (
 	"context"
 	"io"
 	"sync"
+	"syscall"
 	"testing"
 	"time"
 
@@ -159,6 +160,17 @@ func TestRunner_HandlesResize(t *testing.T) {
 	}
 }
 
+// newPTYDataSender returns a fresh ptyDataSender ready for use.
+func newPTYDataSender() *ptyDataSender { return &ptyDataSender{} }
+
+// waitForActivePTY blocks until r.ActivePTYProc() is non-nil or timeout elapses.
+func waitForActivePTY(t *testing.T, r *Runner, timeout time.Duration) {
+	t.Helper()
+	require.Eventually(t, func() bool {
+		return r.ActivePTYProc() != nil
+	}, timeout, 5*time.Millisecond, "ptyProc never became active")
+}
+
 func TestRunner_ForwardsPTYWriteToChild(t *testing.T) {
 	defer goleak.VerifyNone(t)
 
@@ -208,4 +220,36 @@ func TestRunner_ForwardsPTYWriteToChild(t *testing.T) {
 		}
 	}
 	require.True(t, found, "expected MsgTypePTYData frame containing 'ping'")
+}
+
+func TestRunner_SignalSIGINTKillsForegroundPG(t *testing.T) {
+	defer goleak.VerifyNone(t)
+
+	fakeConn := newPTYDataSender()
+	r := NewRunner()
+	r.SetSender(fakeConn)
+	r.StdoutSink = io.Discard
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	runDone := make(chan struct{})
+	go func() {
+		defer close(runDone)
+		// sleep traps SIGINT and exits
+		_, _ = r.Run(ctx, RunSpec{
+			Command: "/bin/sleep",
+			Args:    []string{"100"},
+			PTY:     &cwtypes.PTYConfig{},
+		})
+	}()
+	waitForActivePTY(t, r, time.Second)
+
+	require.NoError(t, r.SignalActivePTY(syscall.SIGINT))
+
+	select {
+	case <-runDone: // Run returned because child exited from SIGINT
+	case <-time.After(2 * time.Second):
+		t.Fatal("child did not exit on SIGINT")
+	}
 }

@@ -99,6 +99,16 @@ func (r *Runner) ResizeActivePTY(cols, rows uint16) error {
 	return p.Resize(cols, rows)
 }
 
+// SignalActivePTY delivers sig to the foreground process group of the running
+// PTY child. Returns ErrNoActivePTY if no PTY child is currently active.
+func (r *Runner) SignalActivePTY(sig syscall.Signal) error {
+	p := r.ActivePTYProc()
+	if p == nil {
+		return ErrNoActivePTY
+	}
+	return p.Signal(sig)
+}
+
 // Run forks/execs the child and blocks until it exits or ctx is canceled.
 // On ctx cancel it sends SIGTERM, waits StopTimeout, then SIGKILL.
 // If spec.PTY is non-nil, the child is started inside a pseudo-terminal and

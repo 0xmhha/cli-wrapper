@@ -6,6 +6,7 @@ import (
 	"context"
 	"os"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/0xmhha/cli-wrapper/internal/ipc"
@@ -64,6 +65,15 @@ func (d *Dispatcher) Handle(msg ipc.OutboxMessage) {
 		}
 		if err := d.runner.ResizeActivePTY(rz.Cols, rz.Rows); err != nil {
 			_ = d.SendControl(ipc.MsgChildError, ipc.ChildErrorPayload{Phase: "pty_resize", Message: err.Error()}, false)
+		}
+	case ipc.MsgTypePTYSignal:
+		sg, err := ipc.DecodePTYSignal(msg.Payload)
+		if err != nil {
+			_ = d.SendControl(ipc.MsgChildError, ipc.ChildErrorPayload{Phase: "pty_signal", Message: err.Error()}, false)
+			return
+		}
+		if err := d.runner.SignalActivePTY(syscall.Signal(sg.Signum)); err != nil {
+			_ = d.SendControl(ipc.MsgChildError, ipc.ChildErrorPayload{Phase: "pty_signal", Message: err.Error()}, false)
 		}
 	case ipc.MsgTypeCapabilityQuery:
 		// CLIWRAP_AGENT_NO_CAPABILITY=1 skips the reply, simulating an older

@@ -119,6 +119,20 @@ func (p *ptyProc) WriteInput(b []byte) error {
 	return err
 }
 
+// Signal delivers sig to the foreground process group of the PTY child.
+// It uses the negative pgid form (syscall.Kill(-pgid, sig)) so the signal
+// reaches grandchildren as well. Falls back to signaling the process directly
+// if pgid is unavailable (e.g., race before Getpgid completed).
+func (p *ptyProc) Signal(sig syscall.Signal) error {
+	if p.pgid > 0 {
+		if err := syscall.Kill(-p.pgid, sig); err == nil {
+			return nil
+		}
+	}
+	// Fallback: signal the process directly.
+	return p.cmd.Process.Signal(sig)
+}
+
 // startReadPump launches a goroutine that reads from the PTY master and
 // dispatches bytes to the OnData callback. The goroutine exits when the PTY
 // master returns an error (typically EOF or EIO after the child exits) and
