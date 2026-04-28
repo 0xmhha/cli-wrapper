@@ -99,6 +99,12 @@ func (p *ptyProc) Close() error {
 	return p.ptmx.Close()
 }
 
+// WriteInput writes b to the PTY master, delivering it as stdin to the child.
+func (p *ptyProc) WriteInput(b []byte) error {
+	_, err := p.ptmx.Write(b)
+	return err
+}
+
 // startReadPump launches a goroutine that reads from the PTY master and
 // dispatches bytes to the OnData callback. The goroutine exits when the PTY
 // master returns an error (typically EOF or EIO after the child exits) and

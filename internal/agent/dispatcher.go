@@ -47,6 +47,15 @@ func (d *Dispatcher) Handle(msg ipc.OutboxMessage) {
 		_ = d.SendControl(ipc.MsgPong, nil, false)
 	case ipc.MsgShutdown:
 		d.stopChild(5 * time.Second)
+	case ipc.MsgTypePTYWrite:
+		w, err := ipc.DecodePTYWrite(msg.Payload)
+		if err != nil {
+			_ = d.SendControl(ipc.MsgChildError, ipc.ChildErrorPayload{Phase: "pty_write", Message: err.Error()}, false)
+			return
+		}
+		if err := d.runner.WriteToActivePTY(w.Bytes); err != nil {
+			_ = d.SendControl(ipc.MsgChildError, ipc.ChildErrorPayload{Phase: "pty_write", Message: err.Error()}, false)
+		}
 	case ipc.MsgTypeCapabilityQuery:
 		// CLIWRAP_AGENT_NO_CAPABILITY=1 skips the reply, simulating an older
 		// agent that does not know this message type (test-only escape hatch

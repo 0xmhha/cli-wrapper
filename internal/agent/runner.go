@@ -18,6 +18,10 @@ import (
 	"github.com/0xmhha/cli-wrapper/internal/ipc"
 )
 
+// ErrNoActivePTY is returned when a PTY write or control operation is attempted
+// but no PTY child is currently running.
+var ErrNoActivePTY = errors.New("agent: no active PTY child")
+
 // RunSpec describes the child process to fork/exec.
 type RunSpec struct {
 	Command     string
@@ -73,6 +77,16 @@ func (r *Runner) ActivePTYProc() *ptyProc {
 	r.ptyMu.Lock()
 	defer r.ptyMu.Unlock()
 	return r.activePTY
+}
+
+// WriteToActivePTY forwards b to the running PTY child's stdin.
+// Returns ErrNoActivePTY if no PTY child is currently active.
+func (r *Runner) WriteToActivePTY(b []byte) error {
+	p := r.ActivePTYProc()
+	if p == nil {
+		return ErrNoActivePTY
+	}
+	return p.WriteInput(b)
 }
 
 // Run forks/execs the child and blocks until it exits or ctx is canceled.

@@ -5,6 +5,7 @@ package agent
 import (
 	"bytes"
 	"context"
+	"io"
 	"sync"
 	"testing"
 	"time"
@@ -114,4 +115,55 @@ func TestRunner_SendsMsgPTYData(t *testing.T) {
 	data, ok := sender.waitForPTYData(2 * time.Second)
 	require.True(t, ok, "expected at least one MsgTypePTYData frame")
 	require.Contains(t, string(data.Bytes), "pty-output-token")
+}
+
+func TestRunner_ForwardsPTYWriteToChild(t *testing.T) {
+	defer goleak.VerifyNone(t)
+
+	sender := &ptyDataSender{}
+	r := NewRunner()
+	r.SetSender(sender)
+	r.StdoutSink = io.Discard
+
+	// Use a cancellable context so we can terminate cat cleanly via SIGTERM.
+	ctx, cancel := context.WithCancel(context.Background())
+	runDone := make(chan error, 1)
+	go func() {
+		_, err := r.Run(ctx, RunSpec{
+			Command:     "/bin/cat",
+			PTY:         &cwtypes.PTYConfig{InitialCols: 80, InitialRows: 24},
+			StopTimeout: 2 * time.Second,
+		})
+		runDone <- err
+	}()
+
+	// Guarantee cat is terminated and runner goroutine exits before test ends.
+	defer func() {
+		cancel()
+		select {
+		case <-runDone:
+		case <-time.After(5 * time.Second):
+			t.Error("runner did not return after ctx cancel")
+		}
+	}()
+
+	// Wait for the PTY process to become active.
+	require.Eventually(t, func() bool {
+		return r.ActivePTYProc() != nil
+	}, 2*time.Second, 5*time.Millisecond, "ptyProc never became active")
+
+	// Send input to /bin/cat via the PTY write path.
+	require.NoError(t, r.WriteToActivePTY([]byte("ping\n")))
+
+	// cat echoes input back; expect a MsgTypePTYData frame containing "ping".
+	var found bool
+	deadline := time.Now().Add(3 * time.Second)
+	for time.Now().Before(deadline) {
+		data, ok := sender.waitForPTYData(100 * time.Millisecond)
+		if ok && bytes.Contains(data.Bytes, []byte("ping")) {
+			found = true
+			break
+		}
+	}
+	require.True(t, found, "expected MsgTypePTYData frame containing 'ping'")
 }
