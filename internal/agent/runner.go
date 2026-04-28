@@ -89,6 +89,16 @@ func (r *Runner) WriteToActivePTY(b []byte) error {
 	return p.WriteInput(b)
 }
 
+// ResizeActivePTY sends TIOCSWINSZ to the running PTY child with the given
+// cols and rows. Returns ErrNoActivePTY if no PTY child is currently active.
+func (r *Runner) ResizeActivePTY(cols, rows uint16) error {
+	p := r.ActivePTYProc()
+	if p == nil {
+		return ErrNoActivePTY
+	}
+	return p.Resize(cols, rows)
+}
+
 // Run forks/execs the child and blocks until it exits or ctx is canceled.
 // On ctx cancel it sends SIGTERM, waits StopTimeout, then SIGKILL.
 // If spec.PTY is non-nil, the child is started inside a pseudo-terminal and

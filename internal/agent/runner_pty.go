@@ -84,6 +84,20 @@ func setWinsize(f *os.File, cols, rows uint16) error {
 	})
 }
 
+// Resize sets the PTY window size to cols × rows via TIOCSWINSZ.
+func (p *ptyProc) Resize(cols, rows uint16) error {
+	return setWinsize(p.ptmx, cols, rows)
+}
+
+// Winsize returns the current PTY window dimensions as (cols, rows).
+func (p *ptyProc) Winsize() (uint16, uint16, error) {
+	sz, err := pty.GetsizeFull(p.ptmx)
+	if err != nil {
+		return 0, 0, err
+	}
+	return sz.Cols, sz.Rows, nil
+}
+
 // OnData registers a callback that is invoked with each chunk of output from
 // the PTY. It must be called before startReadPump.
 func (p *ptyProc) OnData(cb func([]byte)) { p.onData = cb }

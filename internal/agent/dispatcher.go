@@ -56,6 +56,15 @@ func (d *Dispatcher) Handle(msg ipc.OutboxMessage) {
 		if err := d.runner.WriteToActivePTY(w.Bytes); err != nil {
 			_ = d.SendControl(ipc.MsgChildError, ipc.ChildErrorPayload{Phase: "pty_write", Message: err.Error()}, false)
 		}
+	case ipc.MsgTypePTYResize:
+		rz, err := ipc.DecodePTYResize(msg.Payload)
+		if err != nil {
+			_ = d.SendControl(ipc.MsgChildError, ipc.ChildErrorPayload{Phase: "pty_resize", Message: err.Error()}, false)
+			return
+		}
+		if err := d.runner.ResizeActivePTY(rz.Cols, rz.Rows); err != nil {
+			_ = d.SendControl(ipc.MsgChildError, ipc.ChildErrorPayload{Phase: "pty_resize", Message: err.Error()}, false)
+		}
 	case ipc.MsgTypeCapabilityQuery:
 		// CLIWRAP_AGENT_NO_CAPABILITY=1 skips the reply, simulating an older
 		// agent that does not know this message type (test-only escape hatch

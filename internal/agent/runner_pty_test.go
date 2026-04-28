@@ -117,6 +117,48 @@ func TestRunner_SendsMsgPTYData(t *testing.T) {
 	require.Contains(t, string(data.Bytes), "pty-output-token")
 }
 
+func TestRunner_HandlesResize(t *testing.T) {
+	defer goleak.VerifyNone(t)
+
+	sender := &ptyDataSender{}
+	r := NewRunner()
+	r.SetSender(sender)
+	r.StdoutSink = io.Discard
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	runDone := make(chan struct{})
+	go func() {
+		defer close(runDone)
+		_ , _ = r.Run(ctx, RunSpec{
+			Command:     "/bin/sleep",
+			Args:        []string{"3"},
+			PTY:         &cwtypes.PTYConfig{InitialCols: 80, InitialRows: 24},
+			StopTimeout: 2 * time.Second,
+		})
+	}()
+
+	// Wait for the PTY process to become active.
+	require.Eventually(t, func() bool {
+		return r.ActivePTYProc() != nil
+	}, 2*time.Second, 5*time.Millisecond, "ptyProc never became active")
+
+	require.NoError(t, r.ResizeActivePTY(132, 50))
+
+	cols, rows, err := r.ActivePTYProc().Winsize()
+	require.NoError(t, err)
+	require.Equal(t, uint16(132), cols)
+	require.Equal(t, uint16(50), rows)
+
+	cancel()
+	select {
+	case <-runDone:
+	case <-time.After(5 * time.Second):
+		t.Error("runner did not return after ctx cancel")
+	}
+}
+
 func TestRunner_ForwardsPTYWriteToChild(t *testing.T) {
 	defer goleak.VerifyNone(t)
 
