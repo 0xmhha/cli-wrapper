@@ -12,6 +12,46 @@
 
 ---
 
+## Project Conventions (apply to EVERY task)
+
+These are non-negotiable conventions for this repository. The implementing agent must apply them in every task without being told again.
+
+### Commits
+- **DCO sign-off mandatory**: every `git commit` uses `-s`. Example: `git commit -s -m "feat(ipc): ..."`. CI rejects unsigned commits.
+- **Conventional Commits**: `feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `style:`, `chore:`, `build:`, `bench:` (with optional scope). Subject ≤72 chars. Body explains the *why*.
+- **Forbidden trailers**: never add `Co-Authored-By:` or "Generated with Claude" lines (project policy).
+
+### Test naming
+- Function names use `TestSubject_Behavior` (underscore separator). Examples: `TestPTY_DataRoundTrip`, `TestRunner_SendsMsgPTYData`, `TestController_RefusesPTYWhenAgentLacksFeature`.
+- Wherever this plan shows test names without an underscore (e.g. `TestPTYDataRoundTrip`), translate to the underscore form when writing the actual code.
+
+### Goroutine hygiene
+- Every test package that spawns goroutines includes a `TestMain` with `goleak.VerifyTestMain(m)`:
+  ```go
+  package <pkg>
+  import (
+      "testing"
+      "go.uber.org/goleak"
+  )
+  func TestMain(m *testing.M) { goleak.VerifyTestMain(m) }
+  ```
+- For tests that spawn goroutines outside `TestMain` coverage, add `defer goleak.VerifyNone(t)` at the top of the test function.
+- A `TestMain` skeleton must be added the first time a test file in a new package is created.
+
+### errcheck (golangci-lint v2)
+- Bare `defer X(...)` on a function that returns an error fails lint. Use:
+  ```go
+  defer func() { _ = h.Stop(ctx, 1*time.Second) }()
+  ```
+- This applies to `Stop`, `Close`, `Terminate`, `Unsubscribe`, etc.
+
+### Wire protocol convention
+- Host → agent message type IDs use the **low half** (`< 0x80`).
+- Agent → host message type IDs use the **high half** (`≥ 0x80`).
+- This plan reserves: `MsgPTYWrite=0x20`, `MsgPTYResize=0x22`, `MsgPTYSignal=0x23`, `MsgCapabilityQuery=0x30` (host→agent); `MsgPTYData=0x90`, `MsgCapabilityReply=0xB0` (agent→host).
+
+---
+
 ## File Structure
 
 | Path | Responsibility |
@@ -60,7 +100,7 @@ Expected: no errors.
 
 ```bash
 git add go.mod go.sum
-git commit -m "build: add creack/pty dependency for PTY support"
+git commit -s -m "build: add creack/pty dependency for PTY support"
 ```
 
 ---
@@ -76,15 +116,15 @@ git commit -m "build: add creack/pty dependency for PTY support"
 Add to `internal/ipc/messages_test.go`:
 
 ```go
-func TestNewMessageTypeIDs(t *testing.T) {
-    // PTY messages
-    require.Equal(t, MsgType(0x20), MsgTypePTYData)
-    require.Equal(t, MsgType(0x21), MsgTypePTYWrite)
+func TestNewMessageTypeIDs_RespectDirectionConvention(t *testing.T) {
+    // host→agent: low half (< 0x80)
+    require.Equal(t, MsgType(0x20), MsgTypePTYWrite)
     require.Equal(t, MsgType(0x22), MsgTypePTYResize)
     require.Equal(t, MsgType(0x23), MsgTypePTYSignal)
-    // Capability handshake
     require.Equal(t, MsgType(0x30), MsgTypeCapabilityQuery)
-    require.Equal(t, MsgType(0x31), MsgTypeCapabilityReply)
+    // agent→host: high half (>= 0x80)
+    require.Equal(t, MsgType(0x90), MsgTypePTYData)
+    require.Equal(t, MsgType(0xB0), MsgTypeCapabilityReply)
 
     // Ensure no collision with existing IDs
     used := map[MsgType]bool{}
@@ -104,17 +144,27 @@ Expected: undefined references.
 
 - [ ] **Step 3: Add the constants**
 
-In `internal/ipc/messages.go`:
+In `internal/ipc/frame.go` (where the existing MsgType constants live):
 
 ```go
 const (
-    // ... existing ...
-    MsgTypePTYData         MsgType = 0x20
-    MsgTypePTYWrite        MsgType = 0x21
+    // ... existing host→agent IDs (0x01-0x0B) ...
+
+    // PTY mode (host → agent)
+    MsgTypePTYWrite        MsgType = 0x20
     MsgTypePTYResize       MsgType = 0x22
     MsgTypePTYSignal       MsgType = 0x23
+
+    // Capability handshake (host → agent)
     MsgTypeCapabilityQuery MsgType = 0x30
-    MsgTypeCapabilityReply MsgType = 0x31
+
+    // ... existing agent→host IDs (0x81-0x8A) ...
+
+    // PTY mode (agent → host)
+    MsgTypePTYData         MsgType = 0x90
+
+    // Capability handshake (agent → host)
+    MsgTypeCapabilityReply MsgType = 0xB0
 )
 
 // Add the new IDs to AllMessageTypes() helper (if it exists; create if not).
@@ -138,7 +188,7 @@ Expected: PASS.
 
 ```bash
 git add internal/ipc/
-git commit -m "feat(ipc): reserve message type IDs for PTY and capability"
+git commit -s -m "feat(ipc): reserve message type IDs for PTY and capability"
 ```
 
 ---
@@ -269,7 +319,7 @@ Expected: all PASS.
 
 ```bash
 git add internal/ipc/codec_pty.go internal/ipc/codec_pty_test.go
-git commit -m "feat(ipc): add codec for PTY and capability messages"
+git commit -s -m "feat(ipc): add codec for PTY and capability messages"
 ```
 
 ---
@@ -339,7 +389,7 @@ Expected: PASS.
 
 ```bash
 git add internal/ipc/
-git commit -m "feat(ipc): add WAL channel for PTY data with global seq ordering"
+git commit -s -m "feat(ipc): add WAL channel for PTY data with global seq ordering"
 ```
 
 ---
@@ -423,7 +473,7 @@ Expected: PASS.
 
 ```bash
 git add pkg/cliwrap/
-git commit -m "feat(cliwrap): add PTYConfig to Spec public API"
+git commit -s -m "feat(cliwrap): add PTYConfig to Spec public API"
 ```
 
 ---
@@ -471,7 +521,7 @@ var (
 ```bash
 go test ./pkg/cliwrap/ -run TestPublicErrors -v
 git add pkg/cliwrap/errors.go pkg/cliwrap/errors_test.go
-git commit -m "feat(cliwrap): add public errors for PTY mode"
+git commit -s -m "feat(cliwrap): add public errors for PTY mode"
 ```
 
 ---
@@ -533,7 +583,7 @@ Expected: PASS.
 
 ```bash
 git add internal/agent/
-git commit -m "feat(agent): respond to capability query with pty feature"
+git commit -s -m "feat(agent): respond to capability query with pty feature"
 ```
 
 ---
@@ -619,7 +669,7 @@ go test ./internal/controller/ -v
 
 ```bash
 git add internal/controller/
-git commit -m "feat(controller): capability handshake refuses PTY on incompatible agent"
+git commit -s -m "feat(controller): capability handshake refuses PTY on incompatible agent"
 ```
 
 ---
@@ -746,7 +796,7 @@ Update `spawnPTY` to call `proc.startReadPump()` before returning.
 ```bash
 go test ./internal/agent/ -run TestSpawnPTYBashEcho -v
 git add internal/agent/runner_pty.go internal/agent/runner_pty_test.go
-git commit -m "feat(agent): spawn child with PTY and stream output via callback"
+git commit -s -m "feat(agent): spawn child with PTY and stream output via callback"
 ```
 
 ---
@@ -826,7 +876,7 @@ go test ./internal/agent/ -v
 
 ```bash
 git add internal/agent/
-git commit -m "feat(agent): branch runner into PTY mode and emit MsgPTYData"
+git commit -s -m "feat(agent): branch runner into PTY mode and emit MsgPTYData"
 ```
 
 ---
@@ -895,7 +945,7 @@ func (r *Runner) WriteToActivePTY(b []byte) error {
 ```bash
 go test ./internal/agent/ -run TestRunnerForwardsPTYWrite -v
 git add internal/agent/
-git commit -m "feat(agent): forward MsgPTYWrite to PTY master"
+git commit -s -m "feat(agent): forward MsgPTYWrite to PTY master"
 ```
 
 ---
@@ -959,7 +1009,7 @@ case ipc.MsgTypePTYResize:
 ```bash
 go test ./internal/agent/ -run TestRunnerHandlesResize -v
 git add internal/agent/
-git commit -m "feat(agent): handle MsgPTYResize via TIOCSWINSZ"
+git commit -s -m "feat(agent): handle MsgPTYResize via TIOCSWINSZ"
 ```
 
 ---
@@ -1021,7 +1071,7 @@ Ensure `closeCh` is closed when `cmd.Wait` returns (in `waitChild`).
 ```bash
 go test ./internal/agent/ -run TestRunnerSignalSIGINTKillsForegroundPG -v
 git add internal/agent/
-git commit -m "feat(agent): deliver MsgPTYSignal to foreground process group"
+git commit -s -m "feat(agent): deliver MsgPTYSignal to foreground process group"
 ```
 
 ---
@@ -1128,7 +1178,7 @@ func (c *Controller) SubscribePTYData() (<-chan cliwrap.PTYData, func()) {
 ```bash
 go test ./pkg/cliwrap/ -tags integration -run TestManagerSpawnPTY -v
 git add pkg/cliwrap/ internal/controller/
-git commit -m "feat(cliwrap): expose PTY operations on ProcessHandle"
+git commit -s -m "feat(cliwrap): expose PTY operations on ProcessHandle"
 ```
 
 ---
@@ -1173,7 +1223,7 @@ func TestPTYEchoLoop(t *testing.T) {
 ```bash
 go test -tags integration ./test/integration/ -run TestPTYEchoLoop -v
 git add test/integration/pty_echo_test.go
-git commit -m "test(integration): PTY echo loop with 100 iterations"
+git commit -s -m "test(integration): PTY echo loop with 100 iterations"
 ```
 
 ---
@@ -1215,7 +1265,7 @@ func TestPTYResizeChangesChildView(t *testing.T) {
 ```bash
 go test -tags integration ./test/integration/ -run TestPTYResize -v
 git add test/integration/pty_resize_test.go
-git commit -m "test(integration): PTY resize propagates to child via SIGWINCH"
+git commit -s -m "test(integration): PTY resize propagates to child via SIGWINCH"
 ```
 
 ---
@@ -1251,7 +1301,7 @@ func TestPTYSignalSIGINTTerminatesSleep(t *testing.T) {
 ```bash
 go test -tags integration ./test/integration/ -run TestPTYSignal -v
 git add test/integration/pty_signal_test.go
-git commit -m "test(integration): SIGINT via PTY signal exits sleep within 2s"
+git commit -s -m "test(integration): SIGINT via PTY signal exits sleep within 2s"
 ```
 
 ---
@@ -1286,7 +1336,7 @@ func TestPTYDataPersistedToRotatorFile(t *testing.T) {
 ```bash
 go test -tags integration ./test/integration/ -run TestPTYDataPersistedToRotatorFile -v
 git add test/integration/pty_log_persistence_test.go
-git commit -m "test(integration): PTY data also written to rotator file"
+git commit -s -m "test(integration): PTY data also written to rotator file"
 ```
 
 ---
@@ -1328,7 +1378,7 @@ case ipc.MsgTypeCapabilityQuery:
 ```bash
 go test -tags integration ./test/integration/ -run TestSpawnPTYRefusedByOlderAgent -v
 git add test/integration/pty_capability_test.go internal/agent/
-git commit -m "test(integration): host refuses PTY when agent lacks capability"
+git commit -s -m "test(integration): host refuses PTY when agent lacks capability"
 ```
 
 ---
@@ -1374,7 +1424,7 @@ func TestPTYSlowSubscriberDoesNotBlockAgent(t *testing.T) {
 ```bash
 go test -tags chaos ./test/chaos/ -run TestPTYSlowSubscriber -v
 git add test/chaos/pty_slow_consumer_test.go
-git commit -m "test(chaos): slow PTY subscriber does not block agent"
+git commit -s -m "test(chaos): slow PTY subscriber does not block agent"
 ```
 
 ---
@@ -1410,7 +1460,7 @@ func TestPTYAgentCrashMidStream(t *testing.T) {
 ```bash
 go test -tags chaos ./test/chaos/ -run TestPTYAgentCrash -v
 git add test/chaos/pty_agent_crash_test.go
-git commit -m "test(chaos): agent crash detected within 5s on PTY stream"
+git commit -s -m "test(chaos): agent crash detected within 5s on PTY stream"
 ```
 
 ---
@@ -1446,7 +1496,7 @@ func TestPTYChildSIGKILLDetected(t *testing.T) {
 ```bash
 go test -tags chaos ./test/chaos/ -run TestPTYChildSIGKILL -v
 git add test/chaos/pty_child_killed_test.go
-git commit -m "test(chaos): external SIGKILL of PTY child surfaces as exited"
+git commit -s -m "test(chaos): external SIGKILL of PTY child surfaces as exited"
 ```
 
 ---
@@ -1491,7 +1541,7 @@ func BenchmarkPTYThroughput(b *testing.B) {
 ```bash
 go test -tags bench ./test/bench/ -run x -bench BenchmarkPTYThroughput -v
 git add test/bench/pty_throughput_test.go
-git commit -m "bench: PTY throughput (MB/s reported)"
+git commit -s -m "bench: PTY throughput (MB/s reported)"
 ```
 
 ---
@@ -1541,7 +1591,7 @@ func BenchmarkPTYKeystrokeLatency(b *testing.B) {
 ```bash
 go test -tags bench ./test/bench/ -run x -bench BenchmarkPTYKeystrokeLatency -v -benchtime=200x
 git add test/bench/pty_latency_test.go
-git commit -m "bench: PTY keystroke round-trip latency p50/p95/p99"
+git commit -s -m "bench: PTY keystroke round-trip latency p50/p95/p99"
 ```
 
 ---
@@ -1580,7 +1630,7 @@ Expected: green; no goleak failures from the new PTY paths.
 
 ```bash
 git add .
-git commit -m "test: ensure goleak verifies new PTY goroutines"
+git commit -s -m "test: ensure goleak verifies new PTY goroutines"
 ```
 
 (If nothing changed, skip commit.)
@@ -1609,7 +1659,7 @@ git commit -m "test: ensure goleak verifies new PTY goroutines"
 
 ```bash
 git add CHANGELOG.md
-git commit -m "docs(changelog): record PTY first-class support"
+git commit -s -m "docs(changelog): record PTY first-class support"
 ```
 
 ---
