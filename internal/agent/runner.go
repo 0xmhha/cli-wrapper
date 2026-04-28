@@ -11,6 +11,8 @@ import (
 	"os/exec"
 	"syscall"
 	"time"
+
+	"github.com/0xmhha/cli-wrapper/internal/cwtypes"
 )
 
 // RunSpec describes the child process to fork/exec.
@@ -21,6 +23,7 @@ type RunSpec struct {
 	WorkDir     string
 	StopTimeout time.Duration
 	OnStarted   func(pid int) // called after cmd.Start() succeeds, before Wait()
+	PTY         *cwtypes.PTYConfig
 }
 
 // RunResult summarizes the child's exit.
