@@ -226,12 +226,11 @@ func (r *Runner) runPTY(ctx context.Context, spec RunSpec) (RunResult, error) {
 	var seq atomic.Uint64
 	proc.OnData(func(b []byte) {
 		s := seq.Add(1)
-		payload, encErr := ipc.EncodePTYData(ipc.PTYData{Seq: s, Bytes: b})
-		if encErr != nil {
-			return
-		}
 		if r.sender != nil {
-			_ = r.sender.SendControl(ipc.MsgTypePTYData, payload, false)
+			// Pass the struct directly; SendControl encodes it once via
+			// ipc.EncodePayload. Pre-encoding here then re-encoding in
+			// SendControl would double-wrap the bytes.
+			_ = r.sender.SendControl(ipc.MsgTypePTYData, ipc.PTYData{Seq: s, Bytes: b}, false)
 		}
 		// Tee to stdout sink (log collector) regardless of host attachment state
 		// — per spec §3.3, PTY output must be persisted the same as pipe output.

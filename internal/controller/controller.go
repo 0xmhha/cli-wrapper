@@ -46,6 +46,8 @@ type Controller struct {
 	features   []string      // populated by negotiateCapabilities
 	capReplyCh chan []string  // one-shot channel; closed after negotiation
 
+	ptySubs ptySubscribers // fan-out for inbound MsgTypePTYData frames
+
 	closed   atomic.Bool
 	closeErr error
 }
@@ -131,13 +133,21 @@ func (c *Controller) Start(ctx context.Context) error {
 		return cwtypes.ErrPTYUnsupportedByAgent
 	}
 
-	_ = c.send(ipc.MsgStartChild, ipc.StartChildPayload{
+	payload := ipc.StartChildPayload{
 		Command:     c.opts.Spec.Command,
 		Args:        c.opts.Spec.Args,
 		Env:         c.opts.Spec.Env,
 		WorkDir:     c.opts.Spec.WorkDir,
 		StopTimeout: c.opts.Spec.StopTimeout.Milliseconds(),
-	}, true)
+	}
+	if c.opts.Spec.PTY != nil {
+		payload.PTY = &ipc.StartChildPTY{
+			InitialCols: c.opts.Spec.PTY.InitialCols,
+			InitialRows: c.opts.Spec.PTY.InitialRows,
+			Echo:        c.opts.Spec.PTY.Echo,
+		}
+	}
+	_ = c.send(ipc.MsgStartChild, payload, true)
 	return nil
 }
 
@@ -264,5 +274,11 @@ func (c *Controller) handleMessage(msg ipc.OutboxMessage) {
 			return
 		}
 		c.opts.OnLogChunk(p.Stream, p.Data)
+	case ipc.MsgTypePTYData:
+		d, err := ipc.DecodePTYData(msg.Payload)
+		if err != nil {
+			return
+		}
+		c.ptySubs.fanOut(PTYData{Seq: d.Seq, Bytes: d.Bytes})
 	}
 }

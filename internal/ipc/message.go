@@ -18,6 +18,14 @@ type StartChildPayload struct {
 	WorkDir     string            `msgpack:"wd"`
 	StdinMode   uint8             `msgpack:"stdin"` // 0=none, 1=pipe, 2=inherit
 	StopTimeout int64             `msgpack:"stop_to_ms"`
+	PTY         *StartChildPTY    `msgpack:"pty,omitempty"`
+}
+
+// StartChildPTY carries PTY configuration within StartChildPayload.
+type StartChildPTY struct {
+	InitialCols uint16 `msgpack:"cols"`
+	InitialRows uint16 `msgpack:"rows"`
+	Echo        bool   `msgpack:"echo"`
 }
 
 // StopChildPayload requests graceful termination of the child.

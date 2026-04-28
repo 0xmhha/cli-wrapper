@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/0xmhha/cli-wrapper/internal/cwtypes"
 	"github.com/0xmhha/cli-wrapper/internal/ipc"
 )
 
@@ -100,6 +101,15 @@ func (d *Dispatcher) startChild(p ipc.StartChildPayload) {
 
 	d.installLogSinks(d)
 
+	var ptyCfg *cwtypes.PTYConfig
+	if p.PTY != nil {
+		ptyCfg = &cwtypes.PTYConfig{
+			InitialCols: p.PTY.InitialCols,
+			InitialRows: p.PTY.InitialRows,
+			Echo:        p.PTY.Echo,
+		}
+	}
+
 	d.wg.Add(1)
 	go func() {
 		defer d.wg.Done()
@@ -109,6 +119,7 @@ func (d *Dispatcher) startChild(p ipc.StartChildPayload) {
 			Env:         p.Env,
 			WorkDir:     p.WorkDir,
 			StopTimeout: time.Duration(p.StopTimeout) * time.Millisecond,
+			PTY:         ptyCfg,
 			OnStarted: func(pid int) {
 				d.mu.Lock()
 				d.runningPID = pid

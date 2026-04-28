@@ -84,6 +84,14 @@ func (b *SpecBuilder) WithSandbox(s *SandboxSpec) *SpecBuilder {
 	return b
 }
 
+// WithPTY attaches a PTY configuration. If cfg is nil the field is cleared.
+// Call ApplyPTYDefaults on the returned Spec (or let Controller.Start do it)
+// to fill in zero-valued cols/rows.
+func (b *SpecBuilder) WithPTY(cfg *PTYConfig) *SpecBuilder {
+	b.spec.PTY = cfg
+	return b
+}
+
 // Build validates and returns the Spec.
 func (b *SpecBuilder) Build() (Spec, error) {
 	if err := b.spec.Validate(); err != nil {

@@ -29,7 +29,23 @@ type rawMsg struct {
 }
 
 func (s *ptyDataSender) SendControl(t ipc.MsgType, payload any, _ bool) error {
-	if encoded, ok := payload.([]byte); ok {
+	// Encode using the same path as the real Dispatcher.SendControl so that
+	// waitForPTYData's ipc.DecodePTYData call can decode the stored bytes.
+	// This handles both []byte (pre-encoded, now unused) and struct payloads.
+	var encoded []byte
+	switch v := payload.(type) {
+	case []byte:
+		encoded = v
+	default:
+		if payload != nil {
+			var err error
+			encoded, err = ipc.EncodePayload(payload)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	if encoded != nil {
 		s.mu.Lock()
 		s.msgs = append(s.msgs, rawMsg{msgType: t, payload: encoded})
 		s.mu.Unlock()
