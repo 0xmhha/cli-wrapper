@@ -24,4 +24,8 @@ var (
 	// ErrInvalidSpec is re-exported from cwtypes so that
 	// SpecValidationError.Is(ErrInvalidSpec) works across both packages.
 	ErrInvalidSpec = cwtypes.ErrInvalidSpec
+
+	// PTY-related errors.
+	ErrPTYUnsupportedByAgent = errors.New("cliwrap: agent does not support PTY mode")
+	ErrPTYNotConfigured      = errors.New("cliwrap: PTY operations require Spec.PTY to be set")
 )
