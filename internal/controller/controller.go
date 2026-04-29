@@ -41,10 +41,11 @@ type Controller struct {
 	handle *supervise.AgentHandle
 	conn   *ipc.Conn
 
-	mu         sync.Mutex
-	childPID   int
-	features   []string      // populated by negotiateCapabilities
-	capReplyCh chan []string  // one-shot channel; closed after negotiation
+	mu          sync.Mutex
+	childPID    int
+	features    []string     // populated by negotiateCapabilities
+	capReplyCh  chan []string // one-shot channel; closed after negotiation
+	crashSource atomic.Int32 // CrashSource; only meaningful when state==StateCrashed
 
 	ptySubs ptySubscribers // fan-out for inbound MsgTypePTYData frames
 
@@ -68,6 +69,12 @@ func NewController(opts ControllerOptions) (*Controller, error) {
 // State returns the current state.
 func (c *Controller) State() cwtypes.State {
 	return cwtypes.State(c.state.Load())
+}
+
+// CrashSource returns the source that triggered the last crash transition.
+// The value is only meaningful when State() == StateCrashed.
+func (c *Controller) CrashSource() CrashSource {
+	return CrashSource(c.crashSource.Load())
 }
 
 // Options returns the options the controller was constructed with.
@@ -112,6 +119,10 @@ func (c *Controller) Start(ctx context.Context) error {
 	c.capReplyCh = make(chan []string, 1)
 
 	conn.OnMessage(c.handleMessage)
+	conn.SetOnDisconnect(func(_ error) {
+		c.crashSource.Store(int32(CrashSourceConnectionLost))
+		c.state.Store(int32(cwtypes.StateCrashed))
+	})
 	conn.Start()
 
 	// Send HELLO to prompt agent's HELLO_ACK.
