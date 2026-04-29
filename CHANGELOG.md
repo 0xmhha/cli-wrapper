@@ -12,8 +12,12 @@
 - Chaos tests for slow PTY consumer, child SIGKILL.
 - Benchmarks for PTY throughput and keystroke round-trip latency.
 
-### Notes
-- The PTY agent crash chaos test (`TestPTY_AgentCrashDetectedWithin5s`) is currently `t.Skip`ed; it requires wiring agent disconnect to the controller crash state machine, which is tracked as a separate follow-up.
+### Fixed
+- CW-G1: cliwrap-agent crashes are now detected by the host within ~50ms.
+  `ipc.Conn` fires a new `SetOnDisconnect` callback on socket EOF /
+  unrecoverable read error; the controller transitions to `StateCrashed`
+  with `CrashSource = CrashSourceConnectionLost`. Resolves the gap that
+  caused `test/chaos/pty_agent_crash_test.go` to be skipped.
 
 ## [0.2.0] - 2026-04-09
 
