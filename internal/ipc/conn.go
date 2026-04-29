@@ -53,6 +53,11 @@ type Conn struct {
 	startOnce   sync.Once
 	closeOnce   sync.Once
 	closeResult error
+
+	// disconnect callback fields
+	disconnectMu sync.Mutex
+	onDisconnect func(error)
+	fireOnce     sync.Once
 }
 
 // NewConn constructs a Conn. Call Start() to launch the reader/writer
@@ -92,6 +97,32 @@ func NewConn(cfg ConnConfig) (*Conn, error) {
 // calls replace the previous handler atomically.
 func (c *Conn) OnMessage(h MessageHandler) {
 	c.handler.Store(&h)
+}
+
+// SetOnDisconnect registers a callback invoked exactly once when the read loop
+// exits due to EOF or an unrecoverable read error. The callback is NOT invoked
+// when the shutdown is locally initiated via Close(). Subsequent calls replace
+// the registered callback; replacing after Start() is best-effort.
+func (c *Conn) SetOnDisconnect(cb func(error)) {
+	c.disconnectMu.Lock()
+	c.onDisconnect = cb
+	c.disconnectMu.Unlock()
+}
+
+// fireDisconnect calls the registered onDisconnect callback at most once.
+// It is suppressed when c.closed is already true (locally initiated shutdown).
+func (c *Conn) fireDisconnect(cause error) {
+	if c.closed.Load() {
+		return // locally initiated shutdown — do not fire
+	}
+	c.fireOnce.Do(func() {
+		c.disconnectMu.Lock()
+		cb := c.onDisconnect
+		c.disconnectMu.Unlock()
+		if cb != nil {
+			cb(cause)
+		}
+	})
 }
 
 // Seqs exposes the outbound sequence-number generator so higher layers can
@@ -151,10 +182,23 @@ func (c *Conn) Close(ctx context.Context) error {
 
 func (c *Conn) readLoop() {
 	defer c.wg.Done()
+	var exitErr error
+	defer func() {
+		// Fire the disconnect callback unless shutdown was locally initiated.
+		// errors.Is(io.EOF) covers clean EOF; nil would mean loop exited
+		// normally without an error (shouldn't happen, but guard it).
+		switch {
+		case exitErr == nil, errors.Is(exitErr, io.EOF):
+			c.fireDisconnect(ErrAgentDisconnectedEOF)
+		default:
+			c.fireDisconnect(fmt.Errorf("%w: %w", ErrAgentDisconnectedUnexpected, exitErr))
+		}
+	}()
 	for {
 		h, body, err := c.fr.ReadFrame()
 		if err != nil {
 			// EOF or closed network pipe is the normal shutdown signal.
+			exitErr = err
 			return
 		}
 		// Per spec §2.7, receivers must be idempotent on SeqNo regardless
