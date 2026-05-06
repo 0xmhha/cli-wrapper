@@ -21,10 +21,10 @@ This is a direct contradiction of cli-wrapper's stated "production-grade supervi
 - `pkg/cliwrap.ProcessHandle.Stop(ctx)` returns only after the supervised child PTY process has been reaped (`wait4` returned), not merely signaled.
 - Agent's `Run()` does not return until all active child runners have completed cleanup, or a hard deadline elapses.
 - Agent-side child stop budget is strictly less than host-side agent stop budget, so the chain `host → agent → child` reliably completes within `host.AgentHandle.Close` 3s grace.
-- A burst regression test (`test/chaos/burst_spawn_test.go`, new) spawns ≥200 `Manager.Spawn` + `ProcessHandle.Stop` cycles in tight succession, and asserts:
-  - Zero zombies on completion (`ps -A | grep '<defunct>'` filtered for cliwrap-agent / fixture children produces 0 rows).
-  - Zero unbounded process count growth (final pid count − baseline pid count ≤ a small constant, e.g. 5).
-  - No `fork failed` errors during or immediately after the burst (`os.StartProcess` of a sentinel test fixture succeeds).
+- A burst regression test (`test/chaos/burst_spawn_test.go`, new, **opt-in via `CHAOS_BURST=1`**) spawns up to N=50 `Manager.Spawn` + `ProcessHandle.Stop` cycles (default; configurable up to 200 via `BURST_N`) in tight succession with the safety gates listed in §"Test Strategy → Test safety constraints", and asserts:
+  - Zero unbounded process count growth (final pid count − baseline pid count ≤ 5).
+  - No mid-loop delta blowup (every 5 iterations: `pidCount - baseline ≤ 10` and `pidCount ≤ 0.60 × kern.maxproc`).
+  - No `fork failed` errors after the burst (`/bin/true` succeeds).
 - Existing unit, integration, and chaos tests pass with `-race` clean.
 
 ### Non-goals
@@ -163,52 +163,97 @@ Time accounting:
 
 This is tight but bounded. Crucially, the host SIGKILL fallback at 3.0 s is unchanged; it remains the safety net for a deadlocked agent. The new design just makes that fallback rarely needed.
 
-### Change 4 — burst regression test
+### Change 4 — burst regression test (with safety gates)
 
-`test/chaos/burst_spawn_test.go` (new file):
+`test/chaos/burst_spawn_test.go` (new file). Full safety design is in §"Test Strategy → Test safety constraints"; the implementation realizes those constraints. Skeleton (final code in plan Task 1):
 
 ```go
+const (
+    burstDefaultN          = 50
+    burstMaxN              = 200
+    burstPreflightFraction = 0.40 // skip if baseline > 40% of kern.maxproc
+    burstAbortFraction     = 0.60 // mid-loop abort if pidCount > 60% of kern.maxproc
+    burstAbortDelta        = 10   // mid-loop abort if delta > 10
+    burstCheckEvery        = 5    // check cadence
+)
+
 func TestBurst_SpawnStop_NoLeak(t *testing.T) {
+    if os.Getenv("CHAOS_BURST") == "" {
+        t.Skip("opt-in: set CHAOS_BURST=1 to run the burst leak regression")
+    }
     if testing.Short() { t.Skip("burst test takes ~10s") }
+    if os.Getenv("CI") != "" && os.Getenv("BURST_FORCE") == "" {
+        t.Skip("CI detected; set BURST_FORCE=1 to override")
+    }
     defer goleak.VerifyNone(t)
 
-    baselinePIDs := pidCount(t)
+    // Capture cliwrap-agent PIDs already running (e.g. unrelated ai-m sessions).
+    // Cleanup will only kill agents NOT in this set.
+    baselineAgentPIDs := captureCliwrapAgentPIDs()
+    t.Cleanup(func() { killCliwrapAgentsExcept(baselineAgentPIDs) })
 
-    mgr := newTestManager(t)
-    defer mgr.Close()
-
-    const N = 200
-    for i := 0; i < N; i++ {
-        h, err := mgr.Spawn(ctx, fmt.Sprintf("burst-%d", i), Spec{
-            Argv: []string{"/bin/cat"},
-            PTY:  true,
-        })
-        if err != nil { t.Fatalf("spawn %d: %v", i, err) }
-        if err := h.Stop(ctx); err != nil { t.Fatalf("stop %d: %v", i, err) }
+    maxproc := sysctlMaxProc()
+    baseline := pidCount(t)
+    preflightCeil := int(float64(maxproc) * burstPreflightFraction)
+    if baseline > preflightCeil {
+        t.Skipf("baseline pidCount=%d exceeds %.0f%% of kern.maxproc=%d (=%d); host too loaded for safe burst test",
+            baseline, burstPreflightFraction*100, maxproc, preflightCeil)
     }
 
-    // Allow brief reaper drain — no longer than test budget.
+    N := burstDefaultN
+    if v := os.Getenv("BURST_N"); v != "" {
+        if n, err := strconv.Atoi(v); err == nil && n > 0 {
+            if n > burstMaxN {
+                t.Fatalf("BURST_N=%d exceeds hard cap %d", n, burstMaxN)
+            }
+            N = n
+        }
+    }
+    abortAbsolute := int(float64(maxproc) * burstAbortFraction)
+
+    ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+    defer cancel()
+
+    mgr := /* existing test-manager helper from test/chaos/main_test.go pattern */
+    defer func() { _ = mgr.Close() }()
+
+    for i := 0; i < N; i++ {
+        h, err := mgr.Spawn(ctx, fmt.Sprintf("burst-%d", i), cliwrap.Spec{
+            Argv: []string{"/bin/cat"}, PTY: true,
+        })
+        if err != nil { t.Fatalf("spawn %d: %v (pid count=%d)", i, err, pidCount(t)) }
+        if err := h.Stop(ctx); err != nil { t.Fatalf("stop %d: %v (pid count=%d)", i, err, pidCount(t)) }
+
+        if (i+1)%burstCheckEvery == 0 {
+            cur := pidCount(t)
+            if cur > abortAbsolute {
+                t.Fatalf("ABORT iter %d: pidCount=%d > %.0f%% of kern.maxproc=%d (=%d); leak active, abort to protect host",
+                    i+1, cur, burstAbortFraction*100, maxproc, abortAbsolute)
+            }
+            if cur-baseline > burstAbortDelta {
+                t.Fatalf("ABORT iter %d: delta=%d > %d; leak detected (CW-G3 fix should eliminate this)",
+                    i+1, cur-baseline, burstAbortDelta)
+            }
+        }
+    }
+
+    // Allow brief reaper drain.
     deadline := time.Now().Add(2 * time.Second)
     for time.Now().Before(deadline) {
-        if pidCount(t)-baselinePIDs <= 5 { break }
+        if pidCount(t)-baseline <= 5 { break }
         time.Sleep(50 * time.Millisecond)
     }
 
-    delta := pidCount(t) - baselinePIDs
-    if delta > 5 {
-        t.Fatalf("process count grew by %d after %d spawn/stop cycles (expected ≤5)", delta, N)
+    if delta := pidCount(t) - baseline; delta > 5 {
+        t.Fatalf("post-burst delta=%d > 5 after %d cycles", delta, N)
     }
-
-    // Sanity: host can still fork.
     if err := exec.Command("/bin/true").Run(); err != nil {
         t.Fatalf("host fork failed after burst: %v", err)
     }
 }
 ```
 
-`pidCount(t)` is a small helper that runs `ps -A | wc -l` and returns an int.
-
-The test is gated on `!testing.Short()` because it intentionally takes 10 s and burns ~200 cliwrap-agent + child cycles. CI may run it in a separate "chaos" lane.
+Helpers `pidCount`, `sysctlMaxProc`, `captureCliwrapAgentPIDs`, `killCliwrapAgentsExcept` are private file-local; their implementations are listed in the plan (Task 1).
 
 ---
 
@@ -228,11 +273,30 @@ The test is gated on `!testing.Short()` because it intentionally takes 10 s and 
 
 ## Test Strategy
 
+### Test safety constraints (mandatory)
+
+The burst regression test deliberately exercises the very condition (kern.maxproc ceiling) that broke the host in the bug repro. Without explicit safety gates, the test itself can DoS the developer's machine. Apply ALL of the following:
+
+| Gate | Constant | Rationale |
+|---|---|---|
+| Opt-in only | `CHAOS_BURST=1` env var; otherwise `t.Skip` | `go test ./...` must not accidentally trigger this. |
+| `testing.Short()` skip | — | Standard short-mode honor. |
+| CI gate | skip if `CI` env set, unless `BURST_FORCE=1` | CI runners often have tighter limits than dev machines. |
+| Pre-flight ceiling | skip if `pidCount > 0.40 × kern.maxproc` | If the host is already loaded, we'd start within fault range. |
+| Default N | **50** (configurable via `BURST_N`, hard-capped at 200) | Half the original 100-cycle-per-run repro that surfaced the bug; reproduces a 5-run-equivalent leak rate without sustained pressure. |
+| In-loop delta abort | every 5 iterations: abort if `pidCount - baseline > 10` | If a leak is real, it's detectable in <30 procs, well before host risk. |
+| In-loop absolute abort | every 5 iterations: abort if `pidCount > 0.60 × kern.maxproc` | Hard ceiling; we never approach fork-failure territory. |
+| Test-aware cleanup | `t.Cleanup` kills only `cliwrap-agent` PIDs spawned during the test (delta vs baseline-PID set), never unrelated agents | Protects concurrent ai-m sessions that legitimately run cliwrap-agent. |
+
+Aborts above are `t.Fatalf`; the FAIL message is the leak signal, and the test exits without further pressure on the host.
+
+### Test set
+
 1. **Unit** (new): `internal/agent/dispatcher_test.go::TestDispatcher_DrainWaitsForActiveRunners` — start 3 fake runners, signal context, assert `Drain` returns only after all 3 have completed; assert Drain returns within deadline if a runner hangs.
 2. **Unit** (new): `internal/agent/runner_test.go::TestRunner_DefaultStopTimeoutIs2s` — guard against silent regression of Change 2.
 3. **Integration** (modified): existing `test/integration/pty_*_test.go` — must continue to pass; verify shorter stop budget does not break legitimate slow-shutdown CLIs (none in current tests).
-4. **Chaos** (new): `test/chaos/burst_spawn_test.go::TestBurst_SpawnStop_NoLeak` — described above; the primary CW-G3 acceptance test.
-5. **Bench** (downstream, ai-m): `BENCH_RUNS=5 go run ./bench` from ai-m must complete without `fork failed`. This is the original symptom and the ultimate user-visible validation.
+4. **Chaos** (new, opt-in): `test/chaos/burst_spawn_test.go::TestBurst_SpawnStop_NoLeak` — primary CW-G3 acceptance test, gated per safety constraints above.
+5. **Bench** (downstream, ai-m): `BENCH_RUNS=5 go run ./bench` from ai-m must complete without `fork failed`. This is the original symptom and the ultimate user-visible validation, but it is downstream and run only after the chaos test passes locally.
 
 All tests pass with `-race`.
 
