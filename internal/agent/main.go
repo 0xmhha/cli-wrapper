@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/0xmhha/cli-wrapper/internal/ipc"
 )
@@ -83,6 +84,18 @@ func Run(ctx context.Context, cfg Config) error {
 	}
 
 	<-ctx.Done()
+
+	// CW-G3: block until active runners have completed cmd.Wait on their
+	// children before letting the agent process exit. The drain budget is
+	// strictly less than the host's AgentHandle.Close 3s grace, so we
+	// still complete conn.Close + return on time. Without this drain,
+	// runner goroutines mid-wait4 are killed when the agent process exits,
+	// leaving children orphaned to launchd.
+	//
+	// Spec: docs/superpowers/specs/2026-05-04-CW-G3-supervision-leak-design.md
+	drainCtx, drainCancel := context.WithTimeout(context.Background(), 2500*time.Millisecond)
+	_ = d.Drain(drainCtx)
+	drainCancel()
 
 	shutdownCtx, cancel := ctxWithTimeoutSeconds(5)
 	defer cancel()
