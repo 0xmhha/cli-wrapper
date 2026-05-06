@@ -152,8 +152,8 @@ func TestBurst_SpawnStop_NoLeak(t *testing.T) {
 	}
 	defer func() {
 		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer shutdownCancel()
 		_ = mgr.Shutdown(shutdownCtx)
+		shutdownCancel()
 	}()
 
 	for i := 0; i < N; i++ {
