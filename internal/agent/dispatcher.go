@@ -22,6 +22,15 @@ type Dispatcher struct {
 	cancelFn   context.CancelFunc
 	runningPID int
 	wg         sync.WaitGroup
+
+	// activeRunners tracks goroutines that have been started for child
+	// supervision but have not yet returned from cmd.Wait(). Drain blocks
+	// on this waitgroup so the agent process does not exit before pending
+	// reaps complete.
+	//
+	// See docs/superpowers/specs/2026-05-04-CW-G3-supervision-leak-design.md
+	// (CW-G3 Change 1).
+	activeRunners sync.WaitGroup
 }
 
 // NewDispatcher constructs a Dispatcher bound to conn.
@@ -111,7 +120,13 @@ func (d *Dispatcher) startChild(p ipc.StartChildPayload) {
 	}
 
 	d.wg.Add(1)
+	// CW-G3: register this runner with Drain's waitgroup so agent.Run
+	// blocks on its completion (cmd.Wait + child reap) before letting
+	// the agent process exit. release() is sync.Once-protected; deferred
+	// inside the goroutine so any return path decrements correctly.
+	release := d.markRunnerActive()
 	go func() {
+		defer release()
 		defer d.wg.Done()
 		res, err := d.runner.Run(ctx, RunSpec{
 			Command:     p.Command,
@@ -206,4 +221,42 @@ func (d *Dispatcher) SendControl(t ipc.MsgType, payload any, ackRequired bool) e
 
 func ctxWithTimeoutSeconds(n int) (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.Background(), time.Duration(n)*time.Second)
+}
+
+// markRunnerActive registers an in-flight runner goroutine with the dispatcher
+// and returns a release closure that the goroutine must call (typically via
+// defer) AFTER cmd.Wait() returns. The closure is sync.Once-protected, so
+// calling it more than once is a no-op rather than a double-decrement panic.
+//
+// Drain blocks on the resulting waitgroup. See CW-G3 spec
+// (docs/superpowers/specs/2026-05-04-CW-G3-supervision-leak-design.md,
+// Change 1) for the contract: agent.Run must not return until every runner
+// has reaped its child, otherwise the host observes a "process leak" while
+// the kernel still holds zombies pending wait4.
+func (d *Dispatcher) markRunnerActive() func() {
+	d.activeRunners.Add(1)
+	var once sync.Once
+	return func() {
+		once.Do(func() { d.activeRunners.Done() })
+	}
+}
+
+// Drain blocks until all goroutines registered via markRunnerActive have
+// released their tokens, or until ctx is canceled / its deadline elapses.
+// Returns nil on clean drain, ctx.Err() otherwise.
+//
+// Intended caller: agent.Run, after the IPC connection has begun shutting
+// down. See CW-G3 spec.
+func (d *Dispatcher) Drain(ctx context.Context) error {
+	done := make(chan struct{})
+	go func() {
+		d.activeRunners.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
