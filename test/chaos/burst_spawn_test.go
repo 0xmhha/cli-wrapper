@@ -28,16 +28,26 @@ import (
 )
 
 // Safety constants. See spec §"Test safety constraints".
+//
+// These are absolute counts tied to cli-wrapper's intended operating scale,
+// NOT fractions of OS-level kern.maxproc. cli-wrapper is a CLI session
+// supervisor — typical use is single-digit to low-tens of concurrent agents
+// per host. The macOS kern.maxproc default (~4000) is irrelevant: if a
+// cli-wrapper deployment ever has >30 cliwrap-agent processes alive, that
+// is itself a malfunction, regardless of OS headroom.
 const (
-	burstDefaultN          = 50
-	burstMaxN              = 200
-	burstPreflightFraction = 0.40
-	burstAbortFraction     = 0.60
-	burstAbortDelta        = 10
-	burstCheckEvery        = 5
+	burstDefaultN       = 50
+	burstMaxN           = 100 // hard cap. cli-wrapper should never need >100 concurrent.
+	burstAgentPreflight = 10  // skip if host already has >10 cliwrap-agent processes alive
+	burstAgentCeiling   = 30  // mid-loop abort if cliwrap-agent count exceeds this
+	burstAbortDelta     = 10  // mid-loop abort if pidCount delta from baseline exceeds this (primary leak signal)
+	burstCheckEvery     = 5   // check cadence
 )
 
 // pidCount returns the number of running processes visible to the test host.
+// It remains a useful leak signal because the leak window briefly inflates
+// total system pidCount (children mid-exit) even when steady-state cliwrap-agent
+// count is low.
 func pidCount(t *testing.T) int {
 	t.Helper()
 	out, err := exec.Command("sh", "-c", "ps -A | wc -l").Output()
@@ -47,20 +57,6 @@ func pidCount(t *testing.T) int {
 	n, err := strconv.Atoi(strings.TrimSpace(string(out)))
 	if err != nil {
 		t.Fatalf("pidCount parse %q: %v", string(out), err)
-	}
-	return n
-}
-
-// sysctlMaxProc reads kern.maxproc on macOS; returns a conservative default
-// (4000) if the sysctl is unavailable (e.g. Linux).
-func sysctlMaxProc() int {
-	out, err := exec.Command("sysctl", "-n", "kern.maxproc").Output()
-	if err != nil {
-		return 4000
-	}
-	n, err := strconv.Atoi(strings.TrimSpace(string(out)))
-	if err != nil || n <= 0 {
-		return 4000
 	}
 	return n
 }
@@ -125,24 +121,21 @@ func TestBurst_SpawnStop_NoLeak(t *testing.T) {
 	baselineAgentPIDs := captureCliwrapAgentPIDs()
 	t.Cleanup(func() { killCliwrapAgentsExcept(baselineAgentPIDs) })
 
-	maxproc := sysctlMaxProc()
-	baseline := pidCount(t)
-	preflightCeil := int(float64(maxproc) * burstPreflightFraction)
-	if baseline > preflightCeil {
-		t.Skipf("baseline pidCount=%d exceeds %.0f%% of kern.maxproc=%d (=%d); host too loaded for safe burst",
-			baseline, burstPreflightFraction*100, maxproc, preflightCeil)
+	if len(baselineAgentPIDs) > burstAgentPreflight {
+		t.Skipf("host already has %d cliwrap-agent processes (>%d); too loaded for safe burst test",
+			len(baselineAgentPIDs), burstAgentPreflight)
 	}
+	baseline := pidCount(t)
 
 	N := burstDefaultN
 	if v := os.Getenv("BURST_N"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil && n > 0 {
 			if n > burstMaxN {
-				t.Fatalf("BURST_N=%d exceeds hard cap %d", n, burstMaxN)
+				t.Fatalf("BURST_N=%d exceeds hard cap %d (cli-wrapper should never need >100 concurrent)", n, burstMaxN)
 			}
 			N = n
 		}
 	}
-	abortAbsolute := int(float64(maxproc) * burstAbortFraction)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
@@ -188,12 +181,13 @@ func TestBurst_SpawnStop_NoLeak(t *testing.T) {
 
 		if (i+1)%burstCheckEvery == 0 {
 			cur := pidCount(t)
-			if cur > abortAbsolute {
-				t.Fatalf("ABORT iter %d: pidCount=%d > %.0f%% of kern.maxproc=%d (=%d); leak active, abort to protect host",
-					i+1, cur, burstAbortFraction*100, maxproc, abortAbsolute)
+			agentCount := len(captureCliwrapAgentPIDs())
+			if agentCount > burstAgentCeiling {
+				t.Fatalf("ABORT iter %d: cliwrap-agent process count=%d > ceiling=%d; abort to protect host",
+					i+1, agentCount, burstAgentCeiling)
 			}
 			if cur-baseline > burstAbortDelta {
-				t.Fatalf("ABORT iter %d: delta=%d > %d; leak detected (CW-G3 fix should eliminate this)",
+				t.Fatalf("ABORT iter %d: pidCount delta=%d > %d; leak detected (CW-G3 fix should eliminate this)",
 					i+1, cur-baseline, burstAbortDelta)
 			}
 		}

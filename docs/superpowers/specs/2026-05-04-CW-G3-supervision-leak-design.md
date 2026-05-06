@@ -110,6 +110,16 @@ t=?        launchd reaps child (best-effort, queued)
 ```
 Under sustained burst (~100 cycles/s × multi-run bench), launchd queue length grows faster than its reaper drains. Process count climbs until `kern.maxproc` is hit and the host can no longer fork.
 
+#### Diagnosis update (2026-05-04, post-RED-test)
+
+The initial assumption was a permanent orphan-process accumulation. Empirical measurement during Task 1 showed a more nuanced mechanism:
+
+- At burst rates of ~1 cycle per ~120ms (test cadence), **cliwrap-agent processes ARE eventually reaped by launchd**, but reap is **asynchronous and lags `h.Close()`'s return**.
+- A diagnostic test that added ~300ms of incidental syscall overhead per iteration (extra `ps`, `lsof`, `glob`) PASSED N=25 with stable agent count and stable pidCount delta. The original burst test, with no such overhead, reproducibly fails at iter ~15 with `pidCount - baseline > 10`.
+- The IPC-handshake symptom (`controller capability negotiation: context deadline exceeded` at iter 20) is downstream of the same race: the host's prior `AgentHandle.Close` returns before the OS has fully released the socketpair / process slot the next agent needs.
+
+**Refined fix contract**: by the time `ProcessHandle.Stop` (or its successor `Close`) returns, the supervised agent **and** its child must be in `wait4`-completed state — not merely signaled, not "we asked launchd to please reap them." The Drain + StopTimeout cascade described in §"Proposed Design" satisfies this contract; the fix direction is unchanged. What this diagnosis adds is the requirement to **assert synchronous reap via `wait4`**, not just trust that ctx-cancel propagates correctly.
+
 ---
 
 ## Proposed Design
@@ -275,18 +285,20 @@ Helpers `pidCount`, `sysctlMaxProc`, `captureCliwrapAgentPIDs`, `killCliwrapAgen
 
 ### Test safety constraints (mandatory)
 
-The burst regression test deliberately exercises the very condition (kern.maxproc ceiling) that broke the host in the bug repro. Without explicit safety gates, the test itself can DoS the developer's machine. Apply ALL of the following:
+The burst regression test deliberately exercises the leak. Without explicit safety gates, the test itself can DoS the developer's machine. Apply ALL of the following.
 
-| Gate | Constant | Rationale |
+**Threshold philosophy** — thresholds reflect cli-wrapper's intended operating scale, not OS-level limits. cli-wrapper is a CLI session supervisor; typical use is single-digit to low-tens of concurrent agents per host. The macOS `kern.maxproc` default (~4000) is a system-wide ceiling unrelated to a healthy cli-wrapper deployment. If we're seeing >30 cliwrap-agent processes alive at once during a burst test, that is itself a malfunction regardless of OS headroom.
+
+| Gate | Value | Rationale |
 |---|---|---|
 | Opt-in only | `CHAOS_BURST=1` env var; otherwise `t.Skip` | `go test ./...` must not accidentally trigger this. |
 | `testing.Short()` skip | — | Standard short-mode honor. |
 | CI gate | skip if `CI` env set, unless `BURST_FORCE=1` | CI runners often have tighter limits than dev machines. |
-| Pre-flight ceiling | skip if `pidCount > 0.40 × kern.maxproc` | If the host is already loaded, we'd start within fault range. |
-| Default N | **50** (configurable via `BURST_N`, hard-capped at 200) | Half the original 100-cycle-per-run repro that surfaced the bug; reproduces a 5-run-equivalent leak rate without sustained pressure. |
-| In-loop delta abort | every 5 iterations: abort if `pidCount - baseline > 10` | If a leak is real, it's detectable in <30 procs, well before host risk. |
-| In-loop absolute abort | every 5 iterations: abort if `pidCount > 0.60 × kern.maxproc` | Hard ceiling; we never approach fork-failure territory. |
-| Test-aware cleanup | `t.Cleanup` kills only `cliwrap-agent` PIDs spawned during the test (delta vs baseline-PID set), never unrelated agents | Protects concurrent ai-m sessions that legitimately run cliwrap-agent. |
+| Pre-flight skip | skip if existing cliwrap-agent count > **10** | If the host already has many cliwrap-agent processes (e.g. a real ai-m session is running), don't add load. |
+| Default N | **50** (configurable via `BURST_N`, hard-capped at **100**) | cli-wrapper should never need >100 concurrent; capping the test at 100 is a design statement. |
+| In-loop primary abort | every 5 iterations: abort if `pidCount - baseline > 10` | The leak signal: even a few transient zombies are evidence of async-reap failure. |
+| In-loop agent ceiling | every 5 iterations: abort if cliwrap-agent count > **30** | Defense-in-depth. If the leak somehow leaves agents alive faster than reap, we stop well below CSV-scale damage. |
+| Test-aware cleanup | `t.Cleanup` kills only cliwrap-agent PIDs not in the baseline set | Protects concurrent ai-m sessions that legitimately run cliwrap-agent. |
 
 Aborts above are `t.Fatalf`; the FAIL message is the leak signal, and the test exits without further pressure on the host.
 
