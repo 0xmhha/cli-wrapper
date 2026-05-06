@@ -18,6 +18,14 @@
   unrecoverable read error; the controller transitions to `StateCrashed`
   with `CrashSource = CrashSourceConnectionLost`. Resolves the gap that
   caused `test/chaos/pty_agent_crash_test.go` to be skipped.
+- CW-G3: supervision cleanup leak under burst spawn/terminate. Agent's
+  `Run()` now drains active runners before `conn.Close` so child
+  reaping (`cmd.Wait`) completes before the agent process exits.
+  Default child stop budget (`Spec.StopTimeout` when unset) lowered
+  from 5 s to 2 s to fit inside the host's 3 s `AgentHandle.Close`
+  grace; without this cascade alignment, sustained burst spawn/stop
+  cycles on macOS leaked children to launchd until `kern.maxproc` was
+  exhausted (~500 cycles in <60 s on Apple M2).
 
 ## [0.2.0] - 2026-04-09
 
