@@ -120,6 +120,18 @@ The initial assumption was a permanent orphan-process accumulation. Empirical me
 
 **Refined fix contract**: by the time `ProcessHandle.Stop` (or its successor `Close`) returns, the supervised agent **and** its child must be in `wait4`-completed state — not merely signaled, not "we asked launchd to please reap them." The Drain + StopTimeout cascade described in §"Proposed Design" satisfies this contract; the fix direction is unchanged. What this diagnosis adds is the requirement to **assert synchronous reap via `wait4`**, not just trust that ctx-cancel propagates correctly.
 
+#### Post-implementation diagnosis (2026-05-04, after Tasks 2-4 landed)
+
+After Drain + StopTimeout fix landed, a final diagnostic run confirmed the agent-side leak is resolved:
+
+- 5 iterations: `cliwrap-agent` count = 0, `cat` (PTY child) count = 0, throughout. No survivors at completion.
+- Original RED signal (system-wide `pidCount - baseline > 10`) was found to be a **false positive**: macOS Spotlight (`mdworker_shared`) and Chrome Renderer fluctuations during the test inflated pidCount by 10-15 unrelated to cli-wrapper.
+- Test signal corrected to `cliwrap-agent count delta` and `cat count delta`, both required to remain ≤ 3.
+
+**However, a separate, host-side leak surfaces at iter ~20** as `controller capability negotiation: context deadline exceeded`. This is **NOT a process leak** (agent + child counts stay at zero); it appears to be cumulative state accumulation in `Manager.handles[]` and/or socket / fd accumulation in `internal/supervise.Spawner` and `internal/ipc.Conn` that prevents new agent IPC handshake after sustained Register/Start/Stop/Close cycles on a single Manager.
+
+This host-side gap is **out of scope for CW-G3** (which is the agent-side cleanup contract). It is filed as a separate follow-up gap (referenced in `../../../ai-m/docs/superpowers/REMAINING-WORK.md`). The burst regression test's default N is set to 15 — well under the iter-20 host-side limit — so it serves as a stable CW-G3 regression guard. Raising N requires fixing the host-side gap first.
+
 ---
 
 ## Proposed Design
