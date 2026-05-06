@@ -22,6 +22,17 @@ import (
 // but no PTY child is currently running.
 var ErrNoActivePTY = errors.New("agent: no active PTY child")
 
+// defaultStopTimeout is the time a runner gives a child to cooperatively exit
+// on SIGTERM before SIGKILLing it (when RunSpec.StopTimeout is unset).
+//
+// Must be strictly less than agent.Run's drain budget (2.5s), which must be
+// strictly less than host AgentHandle.Close's grace (3.0s). Violating this
+// cascade reintroduces CW-G3 (host SIGKILLs agent before runner finishes
+// cmd.Wait → child orphaned).
+//
+// Spec: docs/superpowers/specs/2026-05-04-CW-G3-supervision-leak-design.md
+const defaultStopTimeout = 2 * time.Second
+
 // RunSpec describes the child process to fork/exec.
 type RunSpec struct {
 	Command     string
@@ -155,7 +166,7 @@ func (r *Runner) Run(ctx context.Context, spec RunSpec) (RunResult, error) {
 			_ = cmd.Process.Signal(syscall.SIGTERM)
 			timeout := spec.StopTimeout
 			if timeout <= 0 {
-				timeout = 5 * time.Second
+				timeout = defaultStopTimeout
 			}
 			select {
 			case <-stopSignal:

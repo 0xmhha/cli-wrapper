@@ -68,3 +68,12 @@ func TestRunner_CancelTerminatesProcess(t *testing.T) {
 		t.Fatal("Run did not return after ctx cancel")
 	}
 }
+
+func TestRunner_DefaultStopTimeoutIs2s(t *testing.T) {
+	// Guard against silent regression of the CW-G3 budget cascade. Spec:
+	// 2.0s child grace must fit inside agent.Run's 2.5s drain budget,
+	// which fits inside host AgentHandle.Close's 3.0s grace.
+	if defaultStopTimeout != 2*time.Second {
+		t.Fatalf("defaultStopTimeout = %v; want 2s (CW-G3)", defaultStopTimeout)
+	}
+}
