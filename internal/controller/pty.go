@@ -5,6 +5,7 @@ package controller
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/0xmhha/cli-wrapper/internal/ipc"
 )
@@ -92,5 +93,28 @@ func (c *Controller) SendPTY(_ context.Context, msgType ipc.MsgType, payload []b
 // does not validate the spec; it simply registers a receiver.
 func (c *Controller) SubscribePTYData() (<-chan PTYData, func()) {
 	s := c.ptySubs.add()
+
+	// CW-G4: if a ring buffer dump was received via MsgPTYRingDump (reattach),
+	// drain it to THIS subscriber as the first chunk before live data.
+	// CompareAndSwap ensures exactly-once delivery across concurrent
+	// subscribers — only the first wins.
+	if c.initialBufferDrained.CompareAndSwap(false, true) {
+		c.mu.Lock()
+		buf := c.initialPTYBuffer
+		c.initialPTYBuffer = nil
+		c.mu.Unlock()
+		if len(buf) > 0 {
+			// Send asynchronously to avoid blocking SubscribePTYData
+			// caller. The 5-second timeout drops the dump if the
+			// subscriber doesn't drain promptly.
+			go func() {
+				select {
+				case s.ch <- PTYData{Seq: 0, Bytes: buf}:
+				case <-time.After(5 * time.Second):
+				}
+			}()
+		}
+	}
+
 	return s.ch, func() { c.ptySubs.remove(s) }
 }

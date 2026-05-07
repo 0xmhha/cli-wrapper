@@ -54,6 +54,13 @@ type Controller struct {
 
 	ptySubs ptySubscribers // fan-out for inbound MsgTypePTYData frames
 
+	// CW-G4: when reattaching to a persistent session, the agent emits
+	// MsgPTYRingDump with the ring buffer snapshot. Stored here until the
+	// next SubscribePTYData subscriber drains it. Subsequent subscribers
+	// see only live data — the dump is delivered exactly once.
+	initialPTYBuffer     []byte
+	initialBufferDrained atomic.Bool
+
 	closed   atomic.Bool
 	closeErr error
 }
@@ -314,5 +321,30 @@ func (c *Controller) handleMessage(msg ipc.OutboxMessage) {
 			return
 		}
 		c.ptySubs.fanOut(PTYData{Seq: d.Seq, Bytes: d.Bytes})
+	case ipc.MsgTypePTYRingDump:
+		// CW-G4: one-shot ring buffer dump from a persistent agent on
+		// reattach. Store as initial buffer; the next SubscribePTYData
+		// subscriber drains it before live data.
+		var p ipc.PTYRingDumpPayload
+		if err := ipc.DecodePayload(msg.Payload, &p); err != nil {
+			return
+		}
+		c.SetInitialPTYBuffer(p.Bytes)
 	}
+}
+
+// SetInitialPTYBuffer stores the ring buffer snapshot received via
+// MsgPTYRingDump on reattach. The buffer is delivered as the first
+// chunk(s) to the next SubscribePTYData subscriber; subsequent
+// subscribers see only live data.
+//
+// CW-G4. Idempotent (last-write-wins) but typically called once per
+// reattach.
+func (c *Controller) SetInitialPTYBuffer(b []byte) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.initialPTYBuffer = make([]byte, len(b))
+	copy(c.initialPTYBuffer, b)
+	// Reset drained flag so the new buffer is delivered to the next subscriber.
+	c.initialBufferDrained.Store(false)
 }
