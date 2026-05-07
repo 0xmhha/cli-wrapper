@@ -109,6 +109,7 @@ func (p *processHandle) Stop(ctx context.Context) error {
 func (p *processHandle) Close(ctx context.Context) error {
 	p.mu.Lock()
 	ctrl := p.ctrl
+	persistent := p.spec.Persistent
 	if ctrl != nil {
 		p.lastStatus = Status{
 			State:    ctrl.State(),
@@ -119,6 +120,12 @@ func (p *processHandle) Close(ctx context.Context) error {
 	p.mu.Unlock()
 	if ctrl == nil {
 		return nil
+	}
+	// CW-G4: on persistent sessions, Close releases this host's connection
+	// only; the agent stays alive in detached mode for the next reattach.
+	// Use h.Stop(ctx) to fully terminate the persistent session.
+	if persistent {
+		return ctrl.CloseConnOnly(ctx)
 	}
 	return ctrl.Close(ctx)
 }

@@ -204,6 +204,26 @@ func (c *Controller) Close(ctx context.Context) error {
 	return c.closeErr
 }
 
+// CloseConnOnly closes the IPC connection without sending SIGTERM to
+// the agent. Used by ProcessHandle.Close on persistent sessions
+// (CW-G4) — the agent should remain alive in detached mode, ready
+// for next reattach.
+//
+// For reattach-derived controllers, c.handle is nil already, so
+// Close and CloseConnOnly are equivalent. The asymmetry only matters
+// for the original spawning host's controller, where c.handle holds
+// the AgentHandle whose Close would SIGTERM the agent.
+func (c *Controller) CloseConnOnly(ctx context.Context) error {
+	if c.closed.Swap(true) {
+		return c.closeErr
+	}
+	if c.conn != nil {
+		c.closeErr = c.conn.Close(ctx)
+	}
+	// Intentionally NOT calling c.handle.Close().
+	return c.closeErr
+}
+
 // negotiateCapabilities sends MsgTypeCapabilityQuery and waits up to 5 s for
 // MsgTypeCapabilityReply. A timeout is treated as "no features" (backward
 // compatibility with agents that pre-date capability negotiation).

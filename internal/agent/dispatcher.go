@@ -19,6 +19,13 @@ type Dispatcher struct {
 	conn   *ipc.Conn // protected by connMu; CW-G4 swaps it on reattach
 	runner *Runner
 
+	// CW-G4: persistent-mode lifecycle. When true, the dispatcher signals
+	// shutdownReq after the child terminates (Stop or natural exit) so
+	// agent.Run can exit cleanly and the metadata is cleaned up.
+	persistent  bool
+	shutdownMu  sync.Mutex
+	shutdownReq chan struct{}
+
 	mu         sync.Mutex
 	cancelFn   context.CancelFunc
 	runningPID int
@@ -46,6 +53,37 @@ func (d *Dispatcher) currentConn() *ipc.Conn {
 	d.connMu.RLock()
 	defer d.connMu.RUnlock()
 	return d.conn
+}
+
+// SetPersistentShutdown wires the persistent-mode shutdown channel.
+// When set (persistent=true), the dispatcher closes shutdownReq after
+// the child terminates (Stop or natural exit), allowing agent.Run to
+// fall through to cleanup before the bootstrap socketpair would EOF.
+//
+// CW-G4 Task 15+16. Called once at agent.Run startup when in persistent
+// mode; safe to call before or after the dispatcher has begun handling
+// IPC messages.
+func (d *Dispatcher) SetPersistentShutdown(ch chan struct{}) {
+	d.shutdownMu.Lock()
+	defer d.shutdownMu.Unlock()
+	d.persistent = true
+	d.shutdownReq = ch
+}
+
+// requestPersistentShutdown closes the shutdownReq channel exactly once.
+// No-op when not persistent or when shutdownReq is nil.
+func (d *Dispatcher) requestPersistentShutdown() {
+	d.shutdownMu.Lock()
+	defer d.shutdownMu.Unlock()
+	if !d.persistent || d.shutdownReq == nil {
+		return
+	}
+	select {
+	case <-d.shutdownReq:
+		// already closed
+	default:
+		close(d.shutdownReq)
+	}
 }
 
 // AdoptConn replaces the dispatcher's current conn with newConn. Used by
@@ -185,6 +223,9 @@ func (d *Dispatcher) startChild(p ipc.StartChildPayload) {
 		if err != nil {
 			_ = d.SendControl(ipc.MsgChildError, ipc.ChildErrorPayload{Phase: "exec", Message: err.Error()}, false)
 			d.clearRunning()
+			// CW-G4: a persistent agent's child failed to exec — no work
+			// remains, signal self-shutdown.
+			d.requestPersistentShutdown()
 			return
 		}
 
@@ -197,6 +238,10 @@ func (d *Dispatcher) startChild(p ipc.StartChildPayload) {
 		}, false)
 
 		d.clearRunning()
+		// CW-G4: persistent agent terminates when child terminates.
+		// Whether the exit was from h.Stop, signal, or natural completion,
+		// there is no more work for the supervisor.
+		d.requestPersistentShutdown()
 	}()
 }
 

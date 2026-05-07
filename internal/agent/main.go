@@ -109,8 +109,11 @@ func Run(ctx context.Context, cfg Config) error {
 	d := NewDispatcher(conn)
 	conn.OnMessage(d.Handle)
 
-	// CW-G4: tee PTY output to ring buffer for redraw-on-reattach.
+	// CW-G4: persistent-mode wiring.
+	var shutdownReq chan struct{}
 	if pst != nil {
+		shutdownReq = make(chan struct{})
+		d.SetPersistentShutdown(shutdownReq)
 		d.runner.SetPersistentRingBuffer(pst.ring)
 
 		// Start the accept loop in a goroutine. Each accepted conn:
@@ -166,7 +169,14 @@ func Run(ctx context.Context, cfg Config) error {
 		return fmt.Errorf("agent: send hello: %w", err)
 	}
 
-	<-ctx.Done()
+	// CW-G4: persistent agents also exit when the child terminates
+	// (Stop or natural completion). shutdownReq is non-nil only in
+	// persistent mode; the nil-channel branch blocks forever, leaving
+	// only ctx.Done as the wakeup for non-persistent agents.
+	select {
+	case <-ctx.Done():
+	case <-shutdownReq:
+	}
 
 	// CW-G3: block until active runners have completed cmd.Wait on their
 	// children before letting the agent process exit. The drain budget is
