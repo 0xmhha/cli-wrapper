@@ -214,10 +214,22 @@ func (c *Controller) negotiateCapabilities(ctx context.Context) error {
 // AgentSupportsPTY reports whether the connected agent advertised the "pty"
 // feature during capability negotiation.
 func (c *Controller) AgentSupportsPTY() bool {
+	return c.agentHasFeature("pty")
+}
+
+// AgentSupportsPersistence reports whether the connected agent advertised
+// the "persistence" feature during capability negotiation. Used by
+// processHandle.Start to refuse Persistent=true against pre-CW-G4 agents.
+func (c *Controller) AgentSupportsPersistence() bool {
+	return c.agentHasFeature("persistence")
+}
+
+// agentHasFeature is the shared lookup for capability feature checks.
+func (c *Controller) agentHasFeature(name string) bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	for _, f := range c.features {
-		if f == "pty" {
+		if f == name {
 			return true
 		}
 	}

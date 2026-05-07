@@ -12,3 +12,8 @@ func TestAgent_ReplyContainsPTYFeature(t *testing.T) {
 	reply := BuildCapabilityReply()
 	require.Contains(t, reply.Features, "pty")
 }
+
+func TestAgent_ReplyContainsPersistenceFeature(t *testing.T) {
+	reply := BuildCapabilityReply()
+	require.Contains(t, reply.Features, "persistence")
+}

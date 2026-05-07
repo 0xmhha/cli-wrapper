@@ -82,8 +82,18 @@ func (p *processHandle) Start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	if err := ctrl.Start(ctx); err != nil {
+		return err
+	}
+	// CW-G4: refuse Persistent=true against an agent that didn't advertise
+	// the "persistence" capability. Tear down the controller cleanly so the
+	// agent exits before returning the error.
+	if p.spec.Persistent && !ctrl.AgentSupportsPersistence() {
+		_ = ctrl.Close(ctx)
+		return ErrPersistenceUnsupportedByAgent
+	}
 	p.ctrl = ctrl
-	return ctrl.Start(ctx)
+	return nil
 }
 
 func (p *processHandle) Stop(ctx context.Context) error {

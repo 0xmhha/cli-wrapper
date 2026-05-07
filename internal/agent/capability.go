@@ -8,8 +8,13 @@ import "github.com/0xmhha/cli-wrapper/internal/ipc"
 // PTY-mode child processes.
 const FeaturePTY = "pty"
 
+// FeaturePersistence is the capability token advertised when the agent
+// supports CW-G4 persistent sessions (--persistent flag, UNIX listener,
+// reattach handshake).
+const FeaturePersistence = "persistence"
+
 // BuildCapabilityReply constructs the CapabilityReply the agent sends in
 // response to a MsgTypeCapabilityQuery frame.
 func BuildCapabilityReply() ipc.CapabilityReply {
-	return ipc.CapabilityReply{Features: []string{FeaturePTY}}
+	return ipc.CapabilityReply{Features: []string{FeaturePTY, FeaturePersistence}}
 }
