@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -121,4 +122,85 @@ func TestPersistentBootstrap_StaleSockReplacedNotFailed(t *testing.T) {
 	conn, err := net.Dial("unix", staleFile)
 	require.NoError(t, err)
 	require.NoError(t, conn.Close())
+}
+
+func TestPersistentAccept_AcceptsFirstConnection(t *testing.T) {
+	dir := filepath.Join(shortSessionDir(t), "ac1")
+	pst, err := initPersistent(persistentInitOpts{
+		SessionDir: dir, AgentID: "x",
+		Spec: cwtypes.Spec{ID: "x", Persistent: true, RingBufferSize: 1024},
+	})
+	require.NoError(t, err)
+	defer pst.Close()
+
+	acceptedCh := make(chan net.Conn, 1)
+	go pst.runAcceptLoop(func(c net.Conn) {
+		acceptedCh <- c
+		// Hold conn open briefly so attach state is observable.
+		time.Sleep(50 * time.Millisecond)
+		_ = c.Close()
+		pst.markDetached()
+	})
+
+	conn, err := net.Dial("unix", filepath.Join(dir, "sock"))
+	require.NoError(t, err)
+	defer func() { _ = conn.Close() }()
+
+	select {
+	case got := <-acceptedCh:
+		require.NotNil(t, got)
+	case <-time.After(time.Second):
+		t.Fatalf("accept timeout")
+	}
+}
+
+func TestPersistentAccept_RejectsSecondConcurrentAttach(t *testing.T) {
+	dir := filepath.Join(shortSessionDir(t), "ac2")
+	pst, err := initPersistent(persistentInitOpts{
+		SessionDir: dir, AgentID: "x",
+		Spec: cwtypes.Spec{ID: "x", Persistent: true, RingBufferSize: 1024},
+	})
+	require.NoError(t, err)
+	defer pst.Close()
+
+	releaseFirst := make(chan struct{})
+	go pst.runAcceptLoop(func(c net.Conn) {
+		// Hold the first conn until released.
+		<-releaseFirst
+		_ = c.Close()
+		pst.markDetached()
+	})
+
+	// First attach
+	conn1, err := net.Dial("unix", filepath.Join(dir, "sock"))
+	require.NoError(t, err)
+	defer func() { _ = conn1.Close() }()
+	// Allow agent to mark attached
+	time.Sleep(50 * time.Millisecond)
+
+	// .attached flag should exist
+	_, err = os.Stat(filepath.Join(dir, ".attached"))
+	require.NoError(t, err, ".attached flag should exist while attached")
+
+	// Second attach
+	conn2, err := net.Dial("unix", filepath.Join(dir, "sock"))
+	if err == nil {
+		// Got a conn; expect rejection message + close.
+		defer func() { _ = conn2.Close() }()
+		buf := make([]byte, 64)
+		_ = conn2.SetReadDeadline(time.Now().Add(time.Second))
+		n, _ := conn2.Read(buf)
+		if n > 0 {
+			require.Contains(t, string(buf[:n]), "ALREADY_ATTACHED",
+				"rejection message")
+		}
+	}
+
+	close(releaseFirst)
+
+	// Allow .attached to clear
+	require.Eventually(t, func() bool {
+		_, err := os.Stat(filepath.Join(dir, ".attached"))
+		return os.IsNotExist(err)
+	}, 2*time.Second, 20*time.Millisecond, ".attached should be removed after disconnect")
 }

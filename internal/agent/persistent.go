@@ -130,3 +130,49 @@ func (p *persistentState) ringBufferCapForTest() int {
 	}
 	return len(p.ring.data)
 }
+
+// runAcceptLoop blocks calling Accept on the listener. For each accepted
+// connection, it acquires the attach lock; on success, it invokes onAttach
+// with the conn (the connection is then owned by the caller, who must
+// call markDetached when the conn closes).
+//
+// Second concurrent attach: while another host is attached, runAcceptLoop
+// rejects the new conn by writing a short error frame and closing it.
+// (Wire format finalized in Task 12; for now a single ASCII line is used
+// for legibility in raw socket dumps.)
+//
+// runAcceptLoop returns when the listener is closed (e.g., via Close()).
+func (p *persistentState) runAcceptLoop(onAttach func(net.Conn)) {
+	for {
+		conn, err := p.listener.Accept()
+		if err != nil {
+			// Listener closed: graceful exit.
+			return
+		}
+		p.mu.Lock()
+		alreadyAttached := p.attached
+		if !alreadyAttached {
+			p.attached = true
+			_ = os.WriteFile(filepath.Join(p.sessionDir, ".attached"), nil, 0o600)
+		}
+		p.mu.Unlock()
+
+		if alreadyAttached {
+			// Reject: another host is connected.
+			_, _ = conn.Write([]byte("ALREADY_ATTACHED\n"))
+			_ = conn.Close()
+			continue
+		}
+		onAttach(conn)
+	}
+}
+
+// markDetached releases the attach lock and removes the .attached flag
+// file. Called when the adopted IPC conn closes (host disconnect) or
+// when handshake fails partway.
+func (p *persistentState) markDetached() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.attached = false
+	_ = os.Remove(filepath.Join(p.sessionDir, ".attached"))
+}
