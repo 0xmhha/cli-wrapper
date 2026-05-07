@@ -3,6 +3,20 @@
 ## [Unreleased]
 
 ### Added
+- CW-G4: Persistent sessions + reattach. New `Spec.Persistent` flag opts a
+  session into outliving the host process. New `Spec.RingBufferSize`
+  controls in-memory PTY scrollback for redraw on reattach. New
+  `WithPersistentDir(path)` Manager option, `Manager.ListPersistent()`,
+  `Manager.Reattach(ctx, id)`. New CLI commands `cliwrap list --persistent`
+  and `cliwrap kill <id>`. Default behavior (`Persistent=false`) unchanged.
+  When `Persistent=true`, the spawner sets `Setsid: true` and redirects
+  stdio to `<sessionDir>/agent.log`; the agent advertises a `"persistence"`
+  capability and listens on `<sessionDir>/sock` for reattach. Single-host
+  attach at a time (concurrent reattach returns `ErrAlreadyAttached`).
+  `h.Stop` on a persistent session terminates the agent and cleans
+  sock+pid; `h.Close` releases the host's connection only, leaving the
+  agent alive in detached mode. Spec:
+  `docs/superpowers/specs/2026-05-07-CW-G4-persistent-reattach-design.md`.
 - First-class PTY support for child processes via `Spec.PTY`.
 - New IPC messages: `MsgPTYData`, `MsgPTYWrite`, `MsgPTYResize`, `MsgPTYSignal`.
 - Capability negotiation handshake (`MsgCapabilityQuery`/`Reply`); host refuses PTY against incompatible agents with `ErrPTYUnsupportedByAgent`.
