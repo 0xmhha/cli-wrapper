@@ -24,6 +24,11 @@ type Config struct {
 	OutboxCapacity int
 	WALBytes       int64
 	MaxRecvPayload uint32
+
+	// Persistent enables CW-G4 daemon mode: SIGHUP ignored, UNIX listener
+	// at <CLIWRAP_SESSION_DIR>/sock for reattach, in-memory PTY ring buffer.
+	// Set by cmd/cliwrap-agent when --persistent argv flag is present.
+	Persistent bool
 }
 
 // DefaultConfig returns sensible defaults, reading host-supplied env vars
