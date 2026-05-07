@@ -132,6 +132,14 @@ After Drain + StopTimeout fix landed, a final diagnostic run confirmed the agent
 
 This host-side gap is **out of scope for CW-G3** (which is the agent-side cleanup contract). It is filed as a separate follow-up gap (referenced in `../../../ai-m/docs/superpowers/REMAINING-WORK.md`). The burst regression test's default N is set to 15 — well under the iter-20 host-side limit — so it serves as a stable CW-G3 regression guard. Raising N requires fixing the host-side gap first.
 
+#### CW-G3.1 RESOLVED 2026-05-07 (incidentally by CW-G3 + CW-G4)
+
+Diagnostic re-validation after CW-G4 (persistent sessions) landed showed CW-G3.1 no longer reproduces. `TestBurst_SpawnStop_NoLeak` at N=25, 50, and 100 all PASS with `runtime.NumGoroutine()` and host fd count stable throughout (goroutines=3, fds=11 from baseline through final iteration). The `controller capability negotiation: context deadline exceeded` symptom no longer surfaces.
+
+Most plausible mechanism: CW-G3's cascade alignment (agent `Drain` before `conn.Close` + `StopTimeout` 5s→2s) narrowed the host-side cleanup race window. With the agent properly draining before exit, the host's per-iteration `Conn` close completes before the next iteration's spawn IPC handshake begins. Pre-fix, the agent could exit while host-side `Conn` close was still in-flight, leaving transient fd / goroutine state in half-open conditions that over many iterations accumulated to a handshake-blocking threshold.
+
+`burstDefaultN` lifted from 15 to 50 (a comfortable headroom under N=100 hard cap; ~20s test time vs ~40s at N=100). The diagnostic file `host_leak_diag_test.go` used during re-validation was removed; `TestBurst_SpawnStop_NoLeak` at the new default subsumes its coverage.
+
 ---
 
 ## Proposed Design

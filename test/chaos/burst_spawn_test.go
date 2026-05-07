@@ -41,14 +41,17 @@ import (
 // polluted by unrelated background activity (Spotlight, browser helpers).
 // A correctly-supervised burst keeps both deltas at 0 across all iterations.
 const (
-	// burstDefaultN is set to 15 because a separate, currently-unresolved host-side
-	// Manager-state leak surfaces around iteration ~20 as a controller capability-
-	// negotiation timeout (NOT a process leak — cliwrap-agent / cat counts stay
-	// at zero). CW-G3 narrowly addresses agent-side cleanup; the host-side
-	// degradation is filed separately. Raise BURST_N once the host-side gap is
-	// fixed; until then this guard validates the agent-side fix at the
-	// reproducible safe range.
-	burstDefaultN       = 15
+	// burstDefaultN was originally 15 because of CW-G3.1 — a host-side
+	// capability-negotiation timeout that surfaced around iteration ~20.
+	// Diagnostic re-validation 2026-05-07 (post CW-G3 + CW-G4 landing) at
+	// N=25 / 50 / 100 showed goroutines and host fds remained stable
+	// (goroutines=3, fds=11 throughout). The host-side state leak no
+	// longer reproduces; CW-G3.1 is RESOLVED — incidentally fixed by
+	// CW-G3's drain + StopTimeout cascade alignment which narrowed the
+	// host-side cleanup race window. N=50 gives strong regression
+	// coverage (~20s test time) without crossing into hot-loop territory.
+	// Raise via BURST_N for stress runs; cap is burstMaxN below.
+	burstDefaultN       = 50
 	burstMaxN           = 100 // hard cap. cli-wrapper should never need >100 concurrent.
 	burstAgentPreflight = 10  // skip if host already has >10 cliwrap-agent processes alive
 	burstAgentCeiling   = 30  // mid-loop abort if cliwrap-agent count exceeds this (defense-in-depth)

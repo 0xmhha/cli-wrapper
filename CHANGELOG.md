@@ -40,6 +40,15 @@
   grace; without this cascade alignment, sustained burst spawn/stop
   cycles on macOS leaked children to launchd until `kern.maxproc` was
   exhausted (~500 cycles in <60 s on Apple M2).
+- CW-G3.1 RESOLVED (incidentally by CW-G3): host-side state accumulation
+  that previously surfaced as `controller capability negotiation: context
+  deadline exceeded` at iter ~20 of `TestBurst_SpawnStop_NoLeak`. Re-
+  validation at N=25, 50, 100 all PASS with stable goroutine + fd counts.
+  CW-G3's drain-before-conn.Close cascade alignment narrowed the host-
+  side cleanup race window enough that per-iteration Conn close completes
+  before the next spawn handshake. `burstDefaultN` lifted from 15 to 50.
+  See `docs/superpowers/specs/2026-05-04-CW-G3-supervision-leak-design.md`
+  §"CW-G3.1 RESOLVED".
 
 ## [0.2.0] - 2026-04-09
 
