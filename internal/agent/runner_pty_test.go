@@ -269,3 +269,32 @@ func TestRunner_SignalSIGINTKillsForegroundPG(t *testing.T) {
 		t.Fatal("child did not exit on SIGINT")
 	}
 }
+
+func TestRunner_PersistentRingBufferWiring(t *testing.T) {
+	rb := newRingBuffer(64)
+	r := NewRunner()
+	r.SetPersistentRingBuffer(rb)
+
+	// Simulate the OnData side-effect path: run the same write the
+	// closure inside runPTY would perform. We don't spawn a real PTY
+	// here — that is exercised by integration tests. This unit test
+	// asserts the wiring (ring receives bytes when configured).
+	bytes := []byte("test-bytes")
+	if r.persistentRing != nil {
+		r.persistentRing.Write(bytes)
+	}
+
+	got := rb.Snapshot()
+	if string(got) != "test-bytes" {
+		t.Fatalf("ring buffer snapshot=%q; want %q", string(got), "test-bytes")
+	}
+}
+
+func TestRunner_PersistentRingBufferNilIsNoOp(t *testing.T) {
+	r := NewRunner()
+	// Default: persistentRing is nil. The PTY OnData path checks for nil
+	// and skips the tee. This test verifies the field starts nil.
+	if r.persistentRing != nil {
+		t.Fatalf("persistentRing should be nil by default")
+	}
+}

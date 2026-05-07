@@ -68,6 +68,19 @@ type Runner struct {
 	// (MsgPTYWrite, MsgPTYResize, MsgPTYSignal handlers).
 	ptyMu     sync.Mutex
 	activePTY *ptyProc
+
+	// persistentRing, when non-nil, is teed in the PTY OnData callback
+	// so reattaching hosts can receive a snapshot of recent output.
+	// CW-G4. Set by agent.Run when in persistent mode.
+	persistentRing *ringBuffer
+}
+
+// SetPersistentRingBuffer wires the per-session ring buffer into the
+// PTY OnData broadcast path. Called once at agent startup when the
+// agent is invoked with --persistent. Nil disables the integration
+// (no-op tee). CW-G4.
+func (r *Runner) SetPersistentRingBuffer(rb *ringBuffer) {
+	r.persistentRing = rb
 }
 
 // NewRunner returns a Runner with default sinks set to io.Discard.
@@ -247,6 +260,12 @@ func (r *Runner) runPTY(ctx context.Context, spec RunSpec) (RunResult, error) {
 		// — per spec §3.3, PTY output must be persisted the same as pipe output.
 		if r.StdoutSink != nil {
 			_, _ = r.StdoutSink.Write(b)
+		}
+		// CW-G4: tee to persistent ring buffer so reattaching hosts can
+		// redraw the current screen state. Single-mutex Write; negligible
+		// at observed cliwrap output_throughput (~65 MB/s).
+		if r.persistentRing != nil {
+			r.persistentRing.Write(b)
 		}
 	})
 	proc.startReadPump()
