@@ -3,6 +3,7 @@
 package agent
 
 import (
+	"io"
 	"net"
 	"os"
 	"path/filepath"
@@ -12,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/0xmhha/cli-wrapper/internal/cwtypes"
+	"github.com/0xmhha/cli-wrapper/internal/ipc"
 )
 
 // shortSessionDir returns a UNIX-socket-friendly directory under /tmp.
@@ -203,4 +205,64 @@ func TestPersistentAccept_RejectsSecondConcurrentAttach(t *testing.T) {
 		_, err := os.Stat(filepath.Join(dir, ".attached"))
 		return os.IsNotExist(err)
 	}, 2*time.Second, 20*time.Millisecond, ".attached should be removed after disconnect")
+}
+
+func TestPersistent_WriteReattachHandshake_HelloAndDump(t *testing.T) {
+	dir := filepath.Join(shortSessionDir(t), "h1")
+	pst, err := initPersistent(persistentInitOpts{
+		SessionDir: dir, AgentID: "test-handshake",
+		Spec: cwtypes.Spec{ID: "test-handshake", Persistent: true, RingBufferSize: 1024},
+	})
+	require.NoError(t, err)
+	defer pst.Close()
+
+	// Pre-populate the ring buffer
+	pst.ring.Write([]byte("redraw-data"))
+
+	// Start accept loop; each conn receives Hello + Dump and closes.
+	startedAt := time.Now().UTC()
+	go pst.runAcceptLoop(func(c net.Conn) {
+		defer pst.markDetached()
+		defer func() { _ = c.Close() }()
+		_ = pst.writeReattachHandshake(c, "test-handshake", startedAt)
+		// Hold briefly so the test can read both frames before EOF.
+		time.Sleep(100 * time.Millisecond)
+	})
+
+	conn, err := net.Dial("unix", filepath.Join(dir, "sock"))
+	require.NoError(t, err)
+	defer func() { _ = conn.Close() }()
+
+	// Read first frame: Hello
+	hdr1, body1 := readOneFrameForTest(t, conn)
+	require.Equal(t, ipc.MsgHello, hdr1.MsgType, "first frame should be Hello")
+	var hello ipc.HelloPayload
+	require.NoError(t, ipc.DecodePayload(body1, &hello))
+	require.Equal(t, "test-handshake", hello.AgentID)
+	require.Equal(t, startedAt.UnixNano(), hello.StartedAt, "Hello.StartedAt should match")
+
+	// Read second frame: PTYRingDump
+	hdr2, body2 := readOneFrameForTest(t, conn)
+	require.Equal(t, ipc.MsgTypePTYRingDump, hdr2.MsgType, "second frame should be PTYRingDump")
+	var dump ipc.PTYRingDumpPayload
+	require.NoError(t, ipc.DecodePayload(body2, &dump))
+	require.Equal(t, []byte("redraw-data"), dump.Bytes)
+}
+
+// readOneFrameForTest reads a single complete IPC frame (header + body)
+// from conn. Used by handshake tests.
+func readOneFrameForTest(t *testing.T, conn net.Conn) (ipc.Header, []byte) {
+	t.Helper()
+	headerBuf := make([]byte, ipc.HeaderSize)
+	_ = conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+	if _, err := io.ReadFull(conn, headerBuf); err != nil {
+		t.Fatalf("read header: %v", err)
+	}
+	var hdr ipc.Header
+	require.NoError(t, hdr.Decode(headerBuf))
+	body := make([]byte, hdr.Length)
+	if _, err := io.ReadFull(conn, body); err != nil {
+		t.Fatalf("read body: %v", err)
+	}
+	return hdr, body
 }

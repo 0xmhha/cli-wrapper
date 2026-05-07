@@ -8,6 +8,7 @@ package agent
 import (
 	"context"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"time"
@@ -111,6 +112,28 @@ func Run(ctx context.Context, cfg Config) error {
 	// CW-G4: tee PTY output to ring buffer for redraw-on-reattach.
 	if pst != nil {
 		d.runner.SetPersistentRingBuffer(pst.ring)
+
+		// Start the accept loop in a goroutine. Each accepted conn receives
+		// the reattach handshake (Hello + PTYRingDump) and is then closed.
+		// Full conn-adoption (replacing the bootstrap socketpair as the
+		// primary IPC channel) is Task 12e.
+		go pst.runAcceptLoop(func(c net.Conn) {
+			defer pst.markDetached()
+			defer func() { _ = c.Close() }()
+			if err := pst.writeReattachHandshake(c, cfg.AgentID, agentStartedAt); err != nil {
+				// Best-effort: hand-off failed; conn closed by defer,
+				// markDetached releases the attach lock so a future reattach
+				// can try again.
+				return
+			}
+			// Task 12e will replace this with conn-adoption logic that
+			// keeps the conn alive and rewires it as the primary IPC
+			// channel. For now, hold briefly so the host can read the
+			// handshake before EOF.
+			//
+			// TODO(CW-G4 Task 12e): adopt conn as primary IPC.
+			time.Sleep(200 * time.Millisecond)
+		})
 	}
 
 	conn.Start()

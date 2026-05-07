@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/0xmhha/cli-wrapper/internal/cwtypes"
+	"github.com/0xmhha/cli-wrapper/internal/ipc"
 )
 
 // defaultRingBufferSize is the in-memory PTY scrollback used when
@@ -175,4 +176,48 @@ func (p *persistentState) markDetached() {
 	defer p.mu.Unlock()
 	p.attached = false
 	_ = os.Remove(filepath.Join(p.sessionDir, ".attached"))
+}
+
+// writeReattachHandshake sends MsgHello + MsgPTYRingDump on the freshly
+// accepted reattach conn. The new host's Manager.Reattach (Task 14)
+// reads these two frames in order before constructing a ProcessHandle.
+//
+// Returns an error on any send failure. Caller is responsible for
+// closing conn + calling markDetached on error.
+func (p *persistentState) writeReattachHandshake(conn net.Conn, agentID string, agentStartedAt time.Time) error {
+	hello := ipc.HelloPayload{
+		ProtocolVersion: ipc.ProtocolVersion,
+		AgentID:         agentID,
+		StartedAt:       agentStartedAt.UnixNano(),
+	}
+	if err := writeOneFrame(conn, ipc.MsgHello, hello); err != nil {
+		return fmt.Errorf("persistent: send hello on reattach: %w", err)
+	}
+
+	dump := ipc.PTYRingDumpPayload{Bytes: p.ring.Snapshot()}
+	if err := writeOneFrame(conn, ipc.MsgTypePTYRingDump, dump); err != nil {
+		return fmt.Errorf("persistent: send ring dump on reattach: %w", err)
+	}
+	return nil
+}
+
+// writeOneFrame encodes payload and writes a single complete IPC frame
+// (header + body) to conn. Used by the reattach handshake before the
+// regular ipc.Conn is wired up to manage this socket.
+func writeOneFrame(conn net.Conn, msgType ipc.MsgType, payload any) error {
+	body, err := ipc.EncodePayload(payload)
+	if err != nil {
+		return err
+	}
+	hdr := ipc.Header{
+		MsgType: msgType,
+		Flags:   0,
+		SeqNo:   0,
+		Length:  uint32(len(body)),
+	}
+	buf := make([]byte, ipc.HeaderSize+len(body))
+	hdr.Encode(buf[:ipc.HeaderSize])
+	copy(buf[ipc.HeaderSize:], body)
+	_, err = conn.Write(buf)
+	return err
 }
