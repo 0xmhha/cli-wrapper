@@ -106,7 +106,15 @@ func (m *Manager) Shutdown(ctx context.Context) error {
 		close(m.watchStop)
 	}
 
+	// CW-G4: persistent sessions are designed to outlive Manager.Shutdown.
+	// For them, skip Stop (which would terminate the session) and only
+	// Close the handle (which releases the host's conn but leaves the
+	// agent running). Non-persistent sessions follow the historical
+	// Stop+Close path.
 	for _, h := range handles {
+		if h.spec.Persistent {
+			continue
+		}
 		_ = h.Stop(ctx)
 	}
 	for _, h := range handles {

@@ -92,6 +92,21 @@ func (b *SpecBuilder) WithPTY(cfg *PTYConfig) *SpecBuilder {
 	return b
 }
 
+// Persistent marks the session as CW-G4 persistent: agent + child outlive
+// the host process and are reattachable via Manager.Reattach.
+func (b *SpecBuilder) Persistent() *SpecBuilder {
+	b.spec.Persistent = true
+	return b
+}
+
+// WithRingBufferSize sets the in-memory PTY ring buffer size (bytes) used
+// for redraw on reattach. Only meaningful when Persistent=true. Default
+// (0) means 256 KiB at agent startup. CW-G4.
+func (b *SpecBuilder) WithRingBufferSize(n int) *SpecBuilder {
+	b.spec.RingBufferSize = n
+	return b
+}
+
 // Build validates and returns the Spec.
 func (b *SpecBuilder) Build() (Spec, error) {
 	if err := b.spec.Validate(); err != nil {
