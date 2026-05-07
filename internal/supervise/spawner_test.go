@@ -53,11 +53,49 @@ func TestSpawner_SpawnsAgentAndReceivesHello(t *testing.T) {
 	spawner := NewSpawner(SpawnerOptions{
 		AgentPath: agentBin,
 	})
-	h, err := spawner.Spawn(ctx, "test-agent-1")
+	h, err := spawner.Spawn(ctx, "test-agent-1", SpawnOpts{})
 	require.NoError(t, err)
 	defer h.Close()
 
 	// The host side of the socket pair is h.Socket; verify it is readable.
 	require.NotNil(t, h.Socket)
 	require.Greater(t, h.PID, 0)
+}
+
+func TestSpawner_PersistentRequiresSessionDir(t *testing.T) {
+	defer goleak.VerifyNone(t)
+	agentBin := BuildAgentForTest(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	spawner := NewSpawner(SpawnerOptions{AgentPath: agentBin})
+	_, err := spawner.Spawn(ctx, "test-agent-persist-bad", SpawnOpts{Persistent: true})
+	require.Error(t, err, "Persistent=true without SessionDir should fail")
+	require.Contains(t, err.Error(), "SessionDir")
+}
+
+func TestSpawner_PersistentCreatesAgentLog(t *testing.T) {
+	defer goleak.VerifyNone(t)
+	agentBin := BuildAgentForTest(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	sessionDir := filepath.Join(t.TempDir(), "session-x")
+	spawner := NewSpawner(SpawnerOptions{AgentPath: agentBin})
+	h, err := spawner.Spawn(ctx, "test-agent-persist-1", SpawnOpts{
+		Persistent: true,
+		SessionDir: sessionDir,
+	})
+	require.NoError(t, err)
+	defer func() { _ = h.Close() }()
+
+	// agent.log should exist (created by spawner before Start)
+	st, err := os.Stat(filepath.Join(sessionDir, "agent.log"))
+	require.NoError(t, err, "agent.log should be created in sessionDir")
+	require.Equal(t, os.FileMode(0o600), st.Mode().Perm(), "agent.log perms")
+
+	// SessionDir itself should be 0700
+	dirSt, err := os.Stat(sessionDir)
+	require.NoError(t, err)
+	require.Equal(t, os.FileMode(0o700), dirSt.Mode().Perm(), "SessionDir perms")
 }

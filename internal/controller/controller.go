@@ -26,6 +26,11 @@ type ControllerOptions struct {
 	Spawner    *supervise.Spawner
 	RuntimeDir string
 
+	// PersistentDir is the parent directory for per-session metadata
+	// (CW-G4). Used only when Spec.Persistent=true. Caller (Manager)
+	// passes Manager.persistentDir.
+	PersistentDir string
+
 	// OnLogChunk is invoked for every inbound ipc.MsgLogChunk frame.
 	// The callback runs on the ipc.Conn dispatch goroutine, so it must
 	// not block for long. Callers that need to do heavy work should
@@ -94,7 +99,13 @@ func (c *Controller) ChildPID() int {
 func (c *Controller) Start(ctx context.Context) error {
 	c.state.Store(int32(cwtypes.StateStarting))
 
-	handle, err := c.opts.Spawner.Spawn(ctx, c.opts.Spec.ID)
+	// CW-G4: pass persistence intent through Spawn options. SessionDir
+	// is the per-session metadata dir under WithPersistentDir.
+	spawnOpts := supervise.SpawnOpts{Persistent: c.opts.Spec.Persistent}
+	if c.opts.Spec.Persistent {
+		spawnOpts.SessionDir = filepath.Join(c.opts.PersistentDir, c.opts.Spec.ID)
+	}
+	handle, err := c.opts.Spawner.Spawn(ctx, c.opts.Spec.ID, spawnOpts)
 	if err != nil {
 		c.state.Store(int32(cwtypes.StateCrashed))
 		return fmt.Errorf("controller start: %w", err)

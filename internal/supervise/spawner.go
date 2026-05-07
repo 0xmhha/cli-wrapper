@@ -9,6 +9,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"sync"
 	"syscall"
 	"time"
@@ -24,6 +25,22 @@ type SpawnerOptions struct {
 
 	// ExtraEnv entries are appended to the agent's environment.
 	ExtraEnv []string
+}
+
+// SpawnOpts is per-spawn customization passed to Spawner.Spawn.
+//
+// Default zero value spawns a non-persistent agent (identical to historical
+// behavior; agent is in host's process group, dies with host on terminal
+// close). When Persistent=true, the agent is daemonized with Setsid and
+// stdio redirected to <SessionDir>/agent.log.
+type SpawnOpts struct {
+	// Persistent enables CW-G4 daemonization for this agent.
+	Persistent bool
+
+	// SessionDir is the per-session metadata directory (sock, pid,
+	// meta.json, agent.log live here). Required when Persistent=true.
+	// Created with mode 0700 if it does not exist.
+	SessionDir string
 }
 
 // AgentHandle is the result of spawning an agent: one half of a connected
@@ -78,9 +95,18 @@ func NewSpawner(opts SpawnerOptions) *Spawner {
 
 // Spawn creates a socket pair, execs the agent with one fd, and returns the
 // host side of the socket wrapped in a net.UnixConn.
-func (s *Spawner) Spawn(ctx context.Context, agentID string) (*AgentHandle, error) {
+//
+// When opts.Persistent is true, the spawned agent is daemonized: Setsid=true
+// (new POSIX session, no controlling terminal), stdio redirected to
+// <opts.SessionDir>/agent.log, cwd set to "/", and --persistent argv flag
+// + CLIWRAP_PERSISTENT=1 + CLIWRAP_SESSION_DIR=<dir> env vars passed.
+// See spec/2026-05-07-CW-G4-persistent-reattach-design.md.
+func (s *Spawner) Spawn(ctx context.Context, agentID string, opts SpawnOpts) (*AgentHandle, error) {
 	if s.opts.AgentPath == "" {
 		return nil, errors.New("supervise: AgentPath is required")
+	}
+	if opts.Persistent && opts.SessionDir == "" {
+		return nil, errors.New("supervise: SessionDir required when Persistent=true")
 	}
 
 	fds, err := syscall.Socketpair(syscall.AF_UNIX, syscall.SOCK_STREAM, 0)
@@ -102,10 +128,46 @@ func (s *Spawner) Spawn(ctx context.Context, agentID string) (*AgentHandle, erro
 		cmd.Env = append(cmd.Env, "CLIWRAP_AGENT_RUNTIME="+s.opts.RuntimeDir)
 	}
 
+	// CW-G4: persistent branch. Daemonize the agent.
+	var persistentLog *os.File
+	if opts.Persistent {
+		if err := os.MkdirAll(opts.SessionDir, 0o700); err != nil {
+			_ = hostFD.Close()
+			_ = agentFD.Close()
+			return nil, fmt.Errorf("supervise: mkdir SessionDir: %w", err)
+		}
+		persistentLog, err = os.OpenFile(
+			filepath.Join(opts.SessionDir, "agent.log"),
+			os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
+		if err != nil {
+			_ = hostFD.Close()
+			_ = agentFD.Close()
+			return nil, fmt.Errorf("supervise: open agent.log: %w", err)
+		}
+		cmd.Stdin = nil
+		cmd.Stdout = persistentLog
+		cmd.Stderr = persistentLog
+		cmd.Dir = "/"
+		cmd.Env = append(cmd.Env,
+			"CLIWRAP_PERSISTENT=1",
+			"CLIWRAP_SESSION_DIR="+opts.SessionDir,
+		)
+		cmd.Args = append(cmd.Args, "--persistent")
+		cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
+	}
+
 	if err := cmd.Start(); err != nil {
+		if persistentLog != nil {
+			_ = persistentLog.Close()
+		}
 		_ = hostFD.Close()
 		_ = agentFD.Close()
 		return nil, fmt.Errorf("supervise: start agent: %w", err)
+	}
+	if persistentLog != nil {
+		// Child inherited the fd via Stdout/Stderr; parent doesn't need
+		// its copy.
+		_ = persistentLog.Close()
 	}
 	// The agent now owns its fd; close our copy.
 	_ = agentFD.Close()
