@@ -4,6 +4,7 @@ package agent
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"sync"
 	"syscall"
@@ -22,9 +23,10 @@ type Dispatcher struct {
 	// CW-G4: persistent-mode lifecycle. When true, the dispatcher signals
 	// shutdownReq after the child terminates (Stop or natural exit) so
 	// agent.Run can exit cleanly and the metadata is cleaned up.
-	persistent  bool
-	shutdownMu  sync.Mutex
-	shutdownReq chan struct{}
+	persistent           bool
+	shutdownMu           sync.Mutex
+	shutdownReq          chan struct{}
+	persistentSessionDir string // set when persistent; used to update meta.json on StartChild
 
 	mu         sync.Mutex
 	cancelFn   context.CancelFunc
@@ -68,6 +70,15 @@ func (d *Dispatcher) SetPersistentShutdown(ch chan struct{}) {
 	defer d.shutdownMu.Unlock()
 	d.persistent = true
 	d.shutdownReq = ch
+}
+
+// persistentSessionDir, when set, enables CW-G4 meta.json updates on
+// StartChild — the full Spec (Command, Args, PTY config, etc.) is recorded
+// so reattach hosts can reconstruct it. Required because initPersistent
+// runs BEFORE StartChild arrives, so the initial meta.json only has the
+// agent ID.
+func (d *Dispatcher) SetPersistentSessionDir(dir string) {
+	d.persistentSessionDir = dir
 }
 
 // requestPersistentShutdown closes the shutdownReq channel exactly once.
@@ -115,6 +126,9 @@ func (d *Dispatcher) AdoptConn(newConn *ipc.Conn) {
 
 // Handle processes an inbound message from the host.
 func (d *Dispatcher) Handle(msg ipc.OutboxMessage) {
+	if os.Getenv("CLIWRAP_DEBUG") == "1" {
+		fmt.Fprintf(os.Stderr, "AGENT: Handle msgType=%d\n", msg.Header.MsgType)
+	}
 	switch msg.Header.MsgType {
 	case ipc.MsgHello:
 		_ = d.SendControl(ipc.MsgHelloAck, ipc.HelloAckPayload{ProtocolVersion: ipc.ProtocolVersion}, false)
@@ -185,6 +199,30 @@ func (d *Dispatcher) startChild(p ipc.StartChildPayload) {
 
 	d.installLogSinks(d)
 
+	// CW-G4: when persistent, update meta.json with the full spec from
+	// StartChild so reattach hosts can reconstruct PTY config, command,
+	// etc. The initial meta.json (written by initPersistent) only has
+	// the agent ID — too sparse for ProcessHandle reconstruction.
+	if d.persistent && d.persistentSessionDir != "" {
+		if existing, err := ReadPersistentMeta(d.persistentSessionDir); err == nil {
+			fullSpec := existing.Spec
+			fullSpec.Command = p.Command
+			fullSpec.Args = append([]string(nil), p.Args...)
+			fullSpec.Env = p.Env
+			fullSpec.WorkDir = p.WorkDir
+			fullSpec.StopTimeout = time.Duration(p.StopTimeout) * time.Millisecond
+			if p.PTY != nil {
+				fullSpec.PTY = &cwtypes.PTYConfig{
+					InitialCols: p.PTY.InitialCols,
+					InitialRows: p.PTY.InitialRows,
+					Echo:        p.PTY.Echo,
+				}
+			}
+			existing.Spec = fullSpec
+			_ = WritePersistentMeta(d.persistentSessionDir, existing)
+		}
+	}
+
 	var ptyCfg *cwtypes.PTYConfig
 	if p.PTY != nil {
 		ptyCfg = &cwtypes.PTYConfig{
@@ -250,15 +288,28 @@ func (d *Dispatcher) startChild(p ipc.StartChildPayload) {
 // inside Runner via RunSpec.StopTimeout, not here: cancel() triggers the
 // SIGTERM→SIGKILL escalation, after which Runner.Run returns and wg.Done()
 // fires. wg.Wait() is therefore bounded by StopTimeout.
+//gocritic:ignore
 func (d *Dispatcher) stopChild(_ time.Duration) {
+	if os.Getenv("CLIWRAP_DEBUG") == "1" {
+		fmt.Fprintf(os.Stderr, "AGENT: stopChild entered\n")
+	}
 	d.mu.Lock()
 	cancel := d.cancelFn
 	d.mu.Unlock()
 	if cancel == nil {
+		if os.Getenv("CLIWRAP_DEBUG") == "1" {
+			fmt.Fprintf(os.Stderr, "AGENT: stopChild cancel=nil, returning\n")
+		}
 		return
 	}
 	cancel()
+	if os.Getenv("CLIWRAP_DEBUG") == "1" {
+		fmt.Fprintf(os.Stderr, "AGENT: stopChild called cancel, waiting on wg\n")
+	}
 	d.wg.Wait()
+	if os.Getenv("CLIWRAP_DEBUG") == "1" {
+		fmt.Fprintf(os.Stderr, "AGENT: stopChild wg.Wait done\n")
+	}
 }
 
 func (d *Dispatcher) clearRunning() {

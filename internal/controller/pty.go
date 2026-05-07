@@ -4,6 +4,8 @@ package controller
 
 import (
 	"context"
+	"fmt"
+	"os"
 	"sync"
 	"time"
 
@@ -93,6 +95,7 @@ func (c *Controller) SendPTY(_ context.Context, msgType ipc.MsgType, payload []b
 // does not validate the spec; it simply registers a receiver.
 func (c *Controller) SubscribePTYData() (<-chan PTYData, func()) {
 	s := c.ptySubs.add()
+	dbg := os.Getenv("CLIWRAP_DEBUG") == "1"
 
 	// CW-G4: if a ring buffer dump was received via MsgPTYRingDump (reattach),
 	// drain it to THIS subscriber as the first chunk before live data.
@@ -103,6 +106,9 @@ func (c *Controller) SubscribePTYData() (<-chan PTYData, func()) {
 		buf := c.initialPTYBuffer
 		c.initialPTYBuffer = nil
 		c.mu.Unlock()
+		if dbg {
+			fmt.Fprintf(os.Stderr, "CTRL: SubscribePTYData drain initial buffer len=%d\n", len(buf))
+		}
 		if len(buf) > 0 {
 			// Send asynchronously to avoid blocking SubscribePTYData
 			// caller. The 5-second timeout drops the dump if the
@@ -110,10 +116,18 @@ func (c *Controller) SubscribePTYData() (<-chan PTYData, func()) {
 			go func() {
 				select {
 				case s.ch <- PTYData{Seq: 0, Bytes: buf}:
+					if dbg {
+						fmt.Fprintf(os.Stderr, "CTRL: initial buffer delivered len=%d\n", len(buf))
+					}
 				case <-time.After(5 * time.Second):
+					if dbg {
+						fmt.Fprintf(os.Stderr, "CTRL: initial buffer drop (timeout)\n")
+					}
 				}
 			}()
 		}
+	} else if dbg {
+		fmt.Fprintf(os.Stderr, "CTRL: SubscribePTYData no buffer drain (already drained)\n")
 	}
 
 	return s.ch, func() { c.ptySubs.remove(s) }

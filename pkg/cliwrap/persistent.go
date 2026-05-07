@@ -165,6 +165,9 @@ func (m *Manager) Reattach(ctx context.Context, id string) (ProcessHandle, error
 		_ = conn.Close()
 		return nil, errors.Join(ErrIncompatibleAgent, err)
 	}
+	if os.Getenv("CLIWRAP_DEBUG") == "1" {
+		fmt.Fprintf(os.Stderr, "MGR: Reattach dump.Bytes len=%d, content=%q\n", len(dump.Bytes), string(dump.Bytes))
+	}
 	// Clear the read deadline before handing to ipc.Conn.
 	_ = conn.SetDeadline(time.Time{})
 

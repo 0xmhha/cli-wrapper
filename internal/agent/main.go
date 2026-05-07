@@ -78,11 +78,14 @@ func Run(ctx context.Context, cfg Config) error {
 		// Spec is not yet known (delivered via MsgStartChild); use a
 		// minimal Spec here. The real Spec is recorded when StartChild
 		// arrives (Task 12d updates meta.json then if needed).
+		// CW-G4: pass agentStartedAt so meta.json and the eventual
+		// reattach Hello share the same value (PID-rollover defense).
 		var pErr error
 		pst, pErr = initPersistent(persistentInitOpts{
 			SessionDir: sessionDir,
 			AgentID:    cfg.AgentID,
 			Spec:       cwtypes.Spec{ID: cfg.AgentID, Persistent: true},
+			StartedAt:  agentStartedAt,
 		})
 		if pErr != nil {
 			return fmt.Errorf("agent: init persistent: %w", pErr)
@@ -95,14 +98,28 @@ func Run(ctx context.Context, cfg Config) error {
 		return fmt.Errorf("agent: ipc fd %d is not valid", cfg.IPCFD)
 	}
 
+	// CW-G4 fix: wrap the inherited socketpair fd in net.FileConn so the
+	// runtime poller handles Read/Write. Without this, os.File-direct
+	// Read uses blocking syscalls and Close cannot unblock a pending
+	// Read — agent's readLoop hangs forever in Close, blocking persistent
+	// session shutdown. (Non-persistent agents masked this because the
+	// host SIGTERMs them and the process exits regardless.)
+	netConn, err := net.FileConn(f)
+	if err != nil {
+		_ = f.Close()
+		return fmt.Errorf("agent: file conn: %w", err)
+	}
+	_ = f.Close() // FileConn dups the fd; the original os.File is no longer needed.
+
 	conn, err := ipc.NewConn(ipc.ConnConfig{
-		RWC:            f,
+		RWC:            netConn,
 		SpillerDir:     filepath.Join(cfg.RuntimeDir, "outbox"),
 		Capacity:       cfg.OutboxCapacity,
 		WALBytes:       cfg.WALBytes,
 		MaxRecvPayload: cfg.MaxRecvPayload,
 	})
 	if err != nil {
+		_ = netConn.Close()
 		return fmt.Errorf("agent: ipc conn: %w", err)
 	}
 
@@ -114,6 +131,7 @@ func Run(ctx context.Context, cfg Config) error {
 	if pst != nil {
 		shutdownReq = make(chan struct{})
 		d.SetPersistentShutdown(shutdownReq)
+		d.SetPersistentSessionDir(pst.sessionDir)
 		d.runner.SetPersistentRingBuffer(pst.ring)
 
 		// Start the accept loop in a goroutine. Each accepted conn:
@@ -175,7 +193,13 @@ func Run(ctx context.Context, cfg Config) error {
 	// only ctx.Done as the wakeup for non-persistent agents.
 	select {
 	case <-ctx.Done():
+		if os.Getenv("CLIWRAP_DEBUG") == "1" {
+			fmt.Fprintf(os.Stderr, "AGENT: main woken by ctx.Done\n")
+		}
 	case <-shutdownReq:
+		if os.Getenv("CLIWRAP_DEBUG") == "1" {
+			fmt.Fprintf(os.Stderr, "AGENT: main woken by shutdownReq\n")
+		}
 	}
 
 	// CW-G3: block until active runners have completed cmd.Wait on their
@@ -189,9 +213,15 @@ func Run(ctx context.Context, cfg Config) error {
 	drainCtx, drainCancel := context.WithTimeout(context.Background(), 2500*time.Millisecond)
 	_ = d.Drain(drainCtx)
 	drainCancel()
+	if os.Getenv("CLIWRAP_DEBUG") == "1" {
+		fmt.Fprintf(os.Stderr, "AGENT: drain done, closing conn\n")
+	}
 
 	shutdownCtx, cancel := ctxWithTimeoutSeconds(5)
 	defer cancel()
 	_ = conn.Close(shutdownCtx)
+	if os.Getenv("CLIWRAP_DEBUG") == "1" {
+		fmt.Fprintf(os.Stderr, "AGENT: conn closed, returning\n")
+	}
 	return nil
 }

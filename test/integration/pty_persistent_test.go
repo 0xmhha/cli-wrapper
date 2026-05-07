@@ -20,6 +20,21 @@ import (
 	"github.com/0xmhha/cli-wrapper/pkg/cliwrap"
 )
 
+// assertEventually polls fn until it returns true or until timeout. Returns
+// true on success. Used by tests that need diagnostic output on failure
+// (require.Eventually unconditionally fails the test).
+func assertEventually(t *testing.T, fn func() bool, timeout, interval time.Duration) bool {
+	t.Helper()
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		if fn() {
+			return true
+		}
+		time.Sleep(interval)
+	}
+	return false
+}
+
 // shortPersistentDir returns a UNIX-socket-friendly directory under /tmp.
 // macOS sun_path is ~104 bytes; t.TempDir() prefixes are too long.
 func shortPersistentDir(t *testing.T) string {
@@ -86,11 +101,22 @@ func TestPersistent_BasicSpawnAndStop(t *testing.T) {
 	stopCancel()
 
 	// After Stop, sock + pid should be cleaned. meta.json + agent.log preserved.
-	require.Eventually(t, func() bool {
+	if !assertEventually(t, func() bool {
 		_, sockErr := os.Stat(filepath.Join(sessionDir, "sock"))
 		_, pidErr := os.Stat(filepath.Join(sessionDir, "pid"))
 		return os.IsNotExist(sockErr) && os.IsNotExist(pidErr)
-	}, 3*time.Second, 50*time.Millisecond, "sock + pid should be removed after Stop")
+	}, 3*time.Second, 50*time.Millisecond) {
+		// Diagnostic: dump agent.log + ps state
+		if logBytes, err := os.ReadFile(filepath.Join(sessionDir, "agent.log")); err == nil {
+			t.Logf("agent.log contents:\n%s", string(logBytes))
+		}
+		if entries, err := os.ReadDir(sessionDir); err == nil {
+			for _, e := range entries {
+				t.Logf("session dir entry: %s", e.Name())
+			}
+		}
+		t.Fatalf("sock + pid should be removed after Stop")
+	}
 
 	_, metaErr := os.Stat(filepath.Join(sessionDir, "meta.json"))
 	require.NoError(t, metaErr, "meta.json should be preserved post-mortem")
@@ -196,6 +222,14 @@ func TestPersistent_HostExitAndReattach(t *testing.T) {
 	reattachCtx, reattachCancel := context.WithTimeout(context.Background(), 10*time.Second)
 	h2, err := mgr2.Reattach(reattachCtx, "persistent-reattach")
 	reattachCancel()
+	if err != nil {
+		// Diagnostic: dump agent.log
+		if logBytes, lerr := os.ReadFile(filepath.Join(persistentDir, "persistent-reattach", "agent.log")); lerr == nil {
+			t.Logf("agent.log on reattach failure:\n%s", string(logBytes))
+		}
+		// Also recheck pid
+		t.Logf("kill -0 pid=%d at reattach failure: %v", pid, proc.Signal(syscall.Signal(0)))
+	}
 	require.NoError(t, err, "Reattach should succeed")
 	require.NotNil(t, h2)
 
@@ -215,7 +249,12 @@ func TestPersistent_HostExitAndReattach(t *testing.T) {
 		case <-time.After(100 * time.Millisecond):
 		}
 	}
-	require.True(t, gotHistorical, "reattach should deliver ring buffer content with prior PTY output")
+	if !gotHistorical {
+		if logBytes, lerr := os.ReadFile(filepath.Join(persistentDir, "persistent-reattach", "agent.log")); lerr == nil {
+			t.Logf("agent.log on ring-buffer failure:\n%s", string(logBytes))
+		}
+		t.Fatalf("reattach should deliver ring buffer content with prior PTY output")
+	}
 
 	// Tear down properly
 	stopCtx, stopCancel := context.WithTimeout(context.Background(), 5*time.Second)

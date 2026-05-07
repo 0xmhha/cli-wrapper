@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -160,15 +161,31 @@ func (c *Conn) Send(msg OutboxMessage) bool {
 // observes lingering goroutines.
 func (c *Conn) Close(ctx context.Context) error {
 	c.closeOnce.Do(func() {
+		dbg := os.Getenv("CLIWRAP_DEBUG") == "1"
+		if dbg {
+			fmt.Fprintf(os.Stderr, "IPC: Close enter\n")
+		}
 		c.closed.Store(true)
 		c.cancelFunc()
+		if dbg {
+			fmt.Fprintf(os.Stderr, "IPC: cancelFunc done\n")
+		}
 		_ = c.rwc.Close()
+		if dbg {
+			fmt.Fprintf(os.Stderr, "IPC: rwc.Close done\n")
+		}
 		c.sp.Outbox().Close()
+		if dbg {
+			fmt.Fprintf(os.Stderr, "IPC: outbox.Close done; calling wg.Wait\n")
+		}
 
 		// Always wait unconditionally for reader/writer goroutines to exit.
 		// The writer selects on cancelCtx.Done() so it exits immediately
 		// after cancel, and the reader returns on rwc close.
 		c.wg.Wait()
+		if dbg {
+			fmt.Fprintf(os.Stderr, "IPC: wg.Wait done\n")
+		}
 
 		// Use ctx only to bound the spiller (WAL) close.
 		spillDone := make(chan error, 1)
@@ -188,7 +205,13 @@ func (c *Conn) Close(ctx context.Context) error {
 }
 
 func (c *Conn) readLoop() {
-	defer c.wg.Done()
+	dbg := os.Getenv("CLIWRAP_DEBUG") == "1"
+	defer func() {
+		if dbg {
+			fmt.Fprintf(os.Stderr, "IPC: readLoop exiting (wg.Done)\n")
+		}
+		c.wg.Done()
+	}()
 	var exitErr error
 	defer func() {
 		// Fire the disconnect callback unless shutdown was locally initiated.
@@ -204,6 +227,9 @@ func (c *Conn) readLoop() {
 	for {
 		h, body, err := c.fr.ReadFrame()
 		if err != nil {
+			if dbg {
+				fmt.Fprintf(os.Stderr, "IPC: readLoop ReadFrame err: %v\n", err)
+			}
 			// EOF or closed network pipe is the normal shutdown signal.
 			exitErr = err
 			return
@@ -221,7 +247,13 @@ func (c *Conn) readLoop() {
 }
 
 func (c *Conn) writeLoop() {
-	defer c.wg.Done()
+	dbg := os.Getenv("CLIWRAP_DEBUG") == "1"
+	defer func() {
+		if dbg {
+			fmt.Fprintf(os.Stderr, "IPC: writeLoop exiting (wg.Done)\n")
+		}
+		c.wg.Done()
+	}()
 	for {
 		// Wait for either a message or a cancel signal. By selecting on
 		// cancelCtx.Done() directly (instead of polling closed + Dequeue),

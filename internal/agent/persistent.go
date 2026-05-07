@@ -39,6 +39,10 @@ type persistentInitOpts struct {
 	SessionDir string
 	AgentID    string
 	Spec       cwtypes.Spec
+	// StartedAt is captured by the caller (agent.Run) and must match the
+	// StartedAt sent on every MsgHello so that Manager.Reattach's
+	// PID-rollover defense (compare meta.json vs hello) succeeds.
+	StartedAt time.Time
 }
 
 // initPersistent runs the bootstrap sequence for an agent invoked with
@@ -71,12 +75,16 @@ func initPersistent(opts persistentInitOpts) (*persistentState, error) {
 
 	// Write meta.json before opening the listener. A partial dir is detectable
 	// as "no sock yet" by ListPersistent.
+	startedAt := opts.StartedAt
+	if startedAt.IsZero() {
+		startedAt = time.Now().UTC()
+	}
 	meta := PersistentMeta{
 		Version:   "1.0",
 		ID:        opts.AgentID,
 		Spec:      opts.Spec,
 		AgentPID:  os.Getpid(),
-		StartedAt: time.Now().UTC(),
+		StartedAt: startedAt,
 	}
 	if err := WritePersistentMeta(opts.SessionDir, meta); err != nil {
 		return nil, fmt.Errorf("persistent: write meta: %w", err)
@@ -194,7 +202,11 @@ func (p *persistentState) writeReattachHandshake(conn net.Conn, agentID string, 
 		return fmt.Errorf("persistent: send hello on reattach: %w", err)
 	}
 
-	dump := ipc.PTYRingDumpPayload{Bytes: p.ring.Snapshot()}
+	snap := p.ring.Snapshot()
+	if os.Getenv("CLIWRAP_DEBUG") == "1" {
+		fmt.Fprintf(os.Stderr, "AGENT: reattach handshake ring snapshot len=%d, content=%q\n", len(snap), string(snap))
+	}
+	dump := ipc.PTYRingDumpPayload{Bytes: snap}
 	if err := writeOneFrame(conn, ipc.MsgTypePTYRingDump, dump); err != nil {
 		return fmt.Errorf("persistent: send ring dump on reattach: %w", err)
 	}

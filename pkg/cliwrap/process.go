@@ -4,9 +4,11 @@ package cliwrap
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"sync/atomic"
 	"syscall"
+	"time"
 
 	"github.com/0xmhha/cli-wrapper/internal/controller"
 	"github.com/0xmhha/cli-wrapper/internal/ipc"
@@ -99,11 +101,39 @@ func (p *processHandle) Start(ctx context.Context) error {
 func (p *processHandle) Stop(ctx context.Context) error {
 	p.mu.Lock()
 	ctrl := p.ctrl
+	persistent := p.spec.Persistent
+	stopTimeout := p.spec.StopTimeout
 	p.mu.Unlock()
 	if ctrl == nil {
 		return ErrProcessNotRunning
 	}
-	return ctrl.Stop(ctx)
+	if err := ctrl.Stop(ctx); err != nil {
+		return err
+	}
+	// CW-G4: persistent sessions have NO SIGTERM safety net (Close uses
+	// CloseConnOnly, no AgentHandle.Close). If MsgStopChild is dropped by
+	// the conn close race (writeLoop canceled before flushing outbox),
+	// the agent never learns to stop. Synchronously wait for the agent
+	// to acknowledge child exit via the state transition triggered by
+	// MsgChildExited reception. Bounded by StopTimeout + 1s slack.
+	if persistent {
+		if stopTimeout <= 0 {
+			stopTimeout = 5 * time.Second
+		}
+		deadline := time.Now().Add(stopTimeout + time.Second)
+		for time.Now().Before(deadline) {
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
+			s := ctrl.State()
+			if s == StateStopped || s == StateCrashed || s == StateFailed {
+				return nil
+			}
+			time.Sleep(20 * time.Millisecond)
+		}
+		return errors.New("cliwrap: persistent Stop timed out waiting for child exit")
+	}
+	return nil
 }
 
 func (p *processHandle) Close(ctx context.Context) error {
