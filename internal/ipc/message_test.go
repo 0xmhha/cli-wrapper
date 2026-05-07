@@ -15,6 +15,9 @@ func TestPayloads_RoundTrip(t *testing.T) {
 		ptr  any
 	}{
 		{"HelloPayload", HelloPayload{ProtocolVersion: 1, AgentID: "agent-1"}, &HelloPayload{}},
+		{"HelloPayload_WithStartedAt", HelloPayload{ProtocolVersion: 1, AgentID: "agent-1", StartedAt: 1_700_000_000_123_456_789}, &HelloPayload{}},
+		{"PTYRingDumpPayload_Empty", PTYRingDumpPayload{Bytes: []byte{}}, &PTYRingDumpPayload{}},
+		{"PTYRingDumpPayload_Bytes", PTYRingDumpPayload{Bytes: []byte("hello world\nline 2")}, &PTYRingDumpPayload{}},
 		{"HelloAckPayload", HelloAckPayload{ProtocolVersion: 1, Capabilities: []string{"logs"}}, &HelloAckPayload{}},
 		{"StartChildPayload", StartChildPayload{
 			Command:     "/bin/echo",

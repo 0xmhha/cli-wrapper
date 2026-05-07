@@ -8,6 +8,15 @@ package ipc
 type HelloPayload struct {
 	ProtocolVersion uint8  `msgpack:"v"`
 	AgentID         string `msgpack:"id"`
+
+	// StartedAt is the agent's startup time in nanoseconds since epoch UTC.
+	// Used by Manager.Reattach (CW-G4) to defend against PID rollover —
+	// the host compares this value to the recorded meta.json startedAt
+	// and returns ErrAgentDead on mismatch.
+	//
+	// Zero (omitted) is acceptable for backward compatibility with
+	// non-persistent agents that never call into Reattach.
+	StartedAt int64 `msgpack:"sa,omitempty"`
 }
 
 // StartChildPayload instructs the agent to fork/exec the target CLI.
@@ -118,4 +127,14 @@ type AckPayload struct {
 // ResumePayload exchanges last-seen sequence numbers on reconnect.
 type ResumePayload struct {
 	LastAckedSeq uint64 `msgpack:"last"`
+}
+
+// PTYRingDumpPayload carries a one-shot snapshot of the agent's persistent
+// PTY ring buffer, sent immediately after MsgHello when a new host attaches
+// to a persistent session. The host's controller queues this dump and
+// delivers it as the first chunk(s) to the next SubscribePTYData subscriber.
+//
+// Spec: docs/superpowers/specs/2026-05-07-CW-G4-persistent-reattach-design.md
+type PTYRingDumpPayload struct {
+	Bytes []byte `msgpack:"b"`
 }
