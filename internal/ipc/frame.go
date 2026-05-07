@@ -71,6 +71,11 @@ const (
 	MsgTypeCapabilityQuery MsgType = 0x30
 )
 
+// Persistent reattach (host -> agent). CW-G4.
+const (
+	MsgTypeReattachQuery MsgType = 0x40
+)
+
 // Data-plane message types (agent -> host).
 const (
 	MsgHelloAck       MsgType = 0x81
@@ -87,7 +92,8 @@ const (
 
 // PTY mode (agent -> host).
 const (
-	MsgTypePTYData MsgType = 0x90
+	MsgTypePTYData     MsgType = 0x90
+	MsgTypePTYRingDump MsgType = 0x91 // CW-G4: one-shot ring buffer dump on reattach
 )
 
 // Capability handshake (agent -> host).
@@ -107,12 +113,14 @@ func AllMessageTypes() []MsgType {
 		MsgTypePTYWrite, MsgTypePTYResize, MsgTypePTYSignal,
 		// Capability handshake (host -> agent)
 		MsgTypeCapabilityQuery,
+		// Persistent reattach (host -> agent), CW-G4
+		MsgTypeReattachQuery,
 		// Data-plane (agent -> host)
 		MsgHelloAck, MsgChildStarted, MsgChildExited, MsgLogChunk,
 		MsgLogFileRef, MsgChildError, MsgPong, MsgResourceSample,
 		MsgAgentFatal, MsgAckData,
 		// PTY mode (agent -> host)
-		MsgTypePTYData,
+		MsgTypePTYData, MsgTypePTYRingDump,
 		// Capability handshake (agent -> host)
 		MsgTypeCapabilityReply,
 	}

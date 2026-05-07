@@ -14,8 +14,10 @@ func TestNewMessageTypeIDs_RespectDirectionConvention(t *testing.T) {
 	require.Equal(t, MsgType(0x22), MsgTypePTYResize)
 	require.Equal(t, MsgType(0x23), MsgTypePTYSignal)
 	require.Equal(t, MsgType(0x30), MsgTypeCapabilityQuery)
+	require.Equal(t, MsgType(0x40), MsgTypeReattachQuery) // CW-G4
 	// agent→host: high half (>= 0x80)
 	require.Equal(t, MsgType(0x90), MsgTypePTYData)
+	require.Equal(t, MsgType(0x91), MsgTypePTYRingDump) // CW-G4
 	require.Equal(t, MsgType(0xB0), MsgTypeCapabilityReply)
 
 	// Ensure no collision with existing IDs
