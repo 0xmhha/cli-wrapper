@@ -5,6 +5,8 @@ package cliwrap
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"sync"
 
 	"github.com/0xmhha/cli-wrapper/internal/controller"
@@ -14,9 +16,10 @@ import (
 
 // Manager is the top-level library entry point.
 type Manager struct {
-	agentPath  string
-	runtimeDir string
-	spawner    *supervise.Spawner
+	agentPath     string
+	runtimeDir    string
+	persistentDir string // CW-G4: dir holding per-session metadata for Persistent=true sessions
+	spawner       *supervise.Spawner
 
 	mu      sync.Mutex
 	handles map[string]*processHandle
@@ -48,6 +51,11 @@ func NewManager(opts ...ManagerOption) (*Manager, error) {
 	}
 	if m.runtimeDir == "" {
 		return nil, errors.New("cliwrap: WithRuntimeDir is required")
+	}
+	// CW-G4: persistentDir defaults to $HOME/.cliwrap/sessions/. Created
+	// lazily on first Persistent=true Spawn (mode 0700).
+	if m.persistentDir == "" {
+		m.persistentDir = filepath.Join(os.Getenv("HOME"), ".cliwrap", "sessions")
 	}
 	m.spawner = supervise.NewSpawner(supervise.SpawnerOptions{
 		AgentPath:  m.agentPath,

@@ -14,3 +14,14 @@ func WithAgentPath(path string) ManagerOption {
 func WithRuntimeDir(path string) ManagerOption {
 	return func(m *Manager) { m.runtimeDir = path }
 }
+
+// WithPersistentDir overrides the directory where persistent-session
+// metadata (sock, pid, meta.json, agent.log) is stored. Default:
+// $HOME/.cliwrap/sessions/. The directory is created with mode 0700
+// lazily on first persistent Spawn; per-session subdirectories are
+// 0700 with files 0600.
+//
+// Tests should pass t.TempDir() to keep state isolated. CW-G4.
+func WithPersistentDir(path string) ManagerOption {
+	return func(m *Manager) { m.persistentDir = path }
+}
