@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/0xmhha/cli-wrapper/internal/cwtypes"
 	"github.com/0xmhha/cli-wrapper/internal/ipc"
 )
 
@@ -62,6 +63,32 @@ func Run(ctx context.Context, cfg Config) error {
 		return fmt.Errorf("agent: mkdir runtime: %w", err)
 	}
 
+	// CW-G4: persistent bootstrap. When --persistent was passed, allocate
+	// the per-session state (ring buffer, listener, meta + pid files) before
+	// the IPC dispatcher is set up. The dispatcher receives a reference to
+	// the ring buffer so PTY OnData tees output for redraw on reattach.
+	var pst *persistentState
+	agentStartedAt := time.Now().UTC()
+	if cfg.Persistent {
+		sessionDir := os.Getenv("CLIWRAP_SESSION_DIR")
+		if sessionDir == "" {
+			return fmt.Errorf("agent: --persistent set but CLIWRAP_SESSION_DIR empty")
+		}
+		// Spec is not yet known (delivered via MsgStartChild); use a
+		// minimal Spec here. The real Spec is recorded when StartChild
+		// arrives (Task 12d updates meta.json then if needed).
+		var pErr error
+		pst, pErr = initPersistent(persistentInitOpts{
+			SessionDir: sessionDir,
+			AgentID:    cfg.AgentID,
+			Spec:       cwtypes.Spec{ID: cfg.AgentID, Persistent: true},
+		})
+		if pErr != nil {
+			return fmt.Errorf("agent: init persistent: %w", pErr)
+		}
+		defer pst.Close()
+	}
+
 	f := os.NewFile(uintptr(cfg.IPCFD), "ipc")
 	if f == nil {
 		return fmt.Errorf("agent: ipc fd %d is not valid", cfg.IPCFD)
@@ -80,10 +107,21 @@ func Run(ctx context.Context, cfg Config) error {
 
 	d := NewDispatcher(conn)
 	conn.OnMessage(d.Handle)
+
+	// CW-G4: tee PTY output to ring buffer for redraw-on-reattach.
+	if pst != nil {
+		d.runner.SetPersistentRingBuffer(pst.ring)
+	}
+
 	conn.Start()
 
-	// Send initial HELLO.
-	helloPayload := ipc.HelloPayload{ProtocolVersion: ipc.ProtocolVersion, AgentID: cfg.AgentID}
+	// Send initial HELLO. CW-G4: include StartedAt for the eventual
+	// reattach handshake (PID rollover defense).
+	helloPayload := ipc.HelloPayload{
+		ProtocolVersion: ipc.ProtocolVersion,
+		AgentID:         cfg.AgentID,
+		StartedAt:       agentStartedAt.UnixNano(),
+	}
 	if err := d.SendControl(ipc.MsgHello, helloPayload, false); err != nil {
 		return fmt.Errorf("agent: send hello: %w", err)
 	}
