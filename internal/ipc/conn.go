@@ -129,6 +129,13 @@ func (c *Conn) fireDisconnect(cause error) {
 // attach seqs to frames they build.
 func (c *Conn) Seqs() *SeqGenerator { return c.seqs }
 
+// Done returns a channel that is closed when the conn's reader/writer
+// goroutines have exited (after Close or remote EOF). Used by callers
+// who need to wait for the conn to finish without holding a reference
+// to its WaitGroup. CW-G4: agent's accept handler waits on this so it
+// knows when to mark the session detached.
+func (c *Conn) Done() <-chan struct{} { return c.cancelCtx.Done() }
+
 // Start launches the reader and writer goroutines. It is safe to call more
 // than once; subsequent calls are no-ops.
 func (c *Conn) Start() {

@@ -15,7 +15,8 @@ import (
 
 // Dispatcher routes inbound IPC messages and coordinates child lifecycles.
 type Dispatcher struct {
-	conn   *ipc.Conn
+	connMu sync.RWMutex
+	conn   *ipc.Conn // protected by connMu; CW-G4 swaps it on reattach
 	runner *Runner
 
 	mu         sync.Mutex
@@ -36,6 +37,42 @@ type Dispatcher struct {
 // NewDispatcher constructs a Dispatcher bound to conn.
 func NewDispatcher(conn *ipc.Conn) *Dispatcher {
 	return &Dispatcher{conn: conn, runner: NewRunner()}
+}
+
+// currentConn returns the dispatcher's current IPC conn under read lock.
+// Consumers (SendControl) must use this rather than reading d.conn directly
+// because CW-G4 swaps the conn on reattach (AdoptConn).
+func (d *Dispatcher) currentConn() *ipc.Conn {
+	d.connMu.RLock()
+	defer d.connMu.RUnlock()
+	return d.conn
+}
+
+// AdoptConn replaces the dispatcher's current conn with newConn. Used by
+// the persistent agent's accept-loop on reattach: after sending Hello +
+// PTYRingDump on the freshly accepted socket, the agent rewires d.conn so
+// all subsequent inbound messages route through it and outbound messages
+// (PTY data, child status, etc.) go to the new host.
+//
+// The previously-adopted conn is closed before the new one is installed.
+// Callers must call newConn.OnMessage(d.Handle) and newConn.Start() before
+// or after AdoptConn — both orderings are safe; OnMessage is atomic.
+//
+// CW-G4 Task 12e.
+func (d *Dispatcher) AdoptConn(newConn *ipc.Conn) {
+	d.connMu.Lock()
+	old := d.conn
+	d.conn = newConn
+	d.connMu.Unlock()
+
+	// Close the old conn so its read/write loops exit and resources release.
+	// Use a short ctx — the old conn is dead from the host's perspective and
+	// we just need its goroutines to wind down.
+	if old != nil {
+		closeCtx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		_ = old.Close(closeCtx)
+		cancel()
+	}
 }
 
 // Handle processes an inbound message from the host.
@@ -209,13 +246,13 @@ func (d *Dispatcher) SendControl(t ipc.MsgType, payload any, ackRequired bool) e
 	}
 	h := ipc.Header{
 		MsgType: t,
-		SeqNo:   d.conn.Seqs().Next(),
+		SeqNo:   d.currentConn().Seqs().Next(),
 		Length:  uint32(len(data)),
 	}
 	if ackRequired {
 		h.Flags |= ipc.FlagAckRequired
 	}
-	d.conn.Send(ipc.OutboxMessage{Header: h, Payload: data})
+	d.currentConn().Send(ipc.OutboxMessage{Header: h, Payload: data})
 	return nil
 }
 

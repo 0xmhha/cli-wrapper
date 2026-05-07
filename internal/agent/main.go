@@ -113,26 +113,43 @@ func Run(ctx context.Context, cfg Config) error {
 	if pst != nil {
 		d.runner.SetPersistentRingBuffer(pst.ring)
 
-		// Start the accept loop in a goroutine. Each accepted conn receives
-		// the reattach handshake (Hello + PTYRingDump) and is then closed.
-		// Full conn-adoption (replacing the bootstrap socketpair as the
-		// primary IPC channel) is Task 12e.
+		// Start the accept loop in a goroutine. Each accepted conn:
+		// 1. Receives the reattach handshake (Hello + PTYRingDump).
+		// 2. Is wrapped in a new ipc.Conn and adopted as the dispatcher's
+		//    primary IPC channel (replacing the bootstrap socketpair or a
+		//    prior reattach conn).
+		// 3. Block until the new conn closes (host disconnect), then
+		//    mark detached so the next reattach can succeed.
 		go pst.runAcceptLoop(func(c net.Conn) {
 			defer pst.markDetached()
-			defer func() { _ = c.Close() }()
+
 			if err := pst.writeReattachHandshake(c, cfg.AgentID, agentStartedAt); err != nil {
-				// Best-effort: hand-off failed; conn closed by defer,
-				// markDetached releases the attach lock so a future reattach
-				// can try again.
+				_ = c.Close()
 				return
 			}
-			// Task 12e will replace this with conn-adoption logic that
-			// keeps the conn alive and rewires it as the primary IPC
-			// channel. For now, hold briefly so the host can read the
-			// handshake before EOF.
-			//
-			// TODO(CW-G4 Task 12e): adopt conn as primary IPC.
-			time.Sleep(200 * time.Millisecond)
+
+			// Wrap in ipc.Conn — outbox dir is per-reattach so successive
+			// reattachments don't clash on WAL files.
+			adoptCfg := ipc.ConnConfig{
+				RWC:            c,
+				SpillerDir:     filepath.Join(cfg.RuntimeDir, fmt.Sprintf("outbox-reattach-%d", time.Now().UnixNano())),
+				Capacity:       cfg.OutboxCapacity,
+				WALBytes:       cfg.WALBytes,
+				MaxRecvPayload: cfg.MaxRecvPayload,
+			}
+			newConn, err := ipc.NewConn(adoptCfg)
+			if err != nil {
+				_ = c.Close()
+				return
+			}
+			newConn.OnMessage(d.Handle)
+			d.AdoptConn(newConn)
+			newConn.Start()
+
+			// Block until the new conn's reader/writer goroutines exit
+			// (host disconnected or ctx canceled). Then markDetached
+			// releases the attach lock for the next reattach.
+			<-newConn.Done()
 		})
 	}
 
