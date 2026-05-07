@@ -17,8 +17,14 @@ import (
 func listCommand(args []string) int {
 	fs := flag.NewFlagSet("list", flag.ContinueOnError)
 	runtimeDir := fs.String("runtime-dir", "", "override runtime directory")
+	persistent := fs.Bool("persistent", false, "list CW-G4 persistent sessions (scans WithPersistentDir, no running manager required)")
+	persistentDir := fs.String("persistent-dir", "", "override persistent directory (default $HOME/.cliwrap/sessions)")
 	if err := fs.Parse(args); err != nil {
 		return 2
+	}
+
+	if *persistent {
+		return listPersistentCommand(*persistentDir)
 	}
 
 	sock := managerSocketPath(*runtimeDir)

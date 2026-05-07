@@ -18,7 +18,7 @@ var (
 func main() {
 	if len(os.Args) < 2 {
 		fmt.Fprintln(os.Stderr, "usage: cliwrap <command> [args...]")
-		fmt.Fprintln(os.Stderr, "commands: run, validate, list, status, stop, logs, events, version")
+		fmt.Fprintln(os.Stderr, "commands: run, validate, list, status, stop, kill, logs, events, version")
 		os.Exit(2)
 	}
 
@@ -37,6 +37,8 @@ func main() {
 		exit = statusCommand(args)
 	case "stop":
 		exit = stopCommand(args)
+	case "kill":
+		exit = killCommand(args)
 	case "logs":
 		exit = logsCommand(args)
 	case "events":
@@ -50,9 +52,10 @@ func main() {
 		fmt.Println("Commands:")
 		fmt.Println("  run        -f config.yaml      start all processes in a config")
 		fmt.Println("  validate   -f config.yaml      check a config without running")
-		fmt.Println("  list                           list supervised processes")
+		fmt.Println("  list       [--persistent]      list supervised processes (or CW-G4 persistent sessions)")
 		fmt.Println("  status     <id>                show one process's status")
 		fmt.Println("  stop       <id>                ask a process to stop")
+		fmt.Println("  kill       <id>                terminate a CW-G4 persistent session")
 		fmt.Println("  logs       [--stream s] [-f] <id>  show or follow a process's log output")
 		fmt.Println("  events     [--process ids]     stream lifecycle events")
 		fmt.Println("  version                        print the cliwrap version")
