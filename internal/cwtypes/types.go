@@ -119,6 +119,18 @@ type Spec struct {
 	Resources      ResourceLimits
 	LogOptions     LogOptions
 	PTY            *PTYConfig `yaml:"pty,omitempty"`
+
+	// Persistent makes the agent + child outlive the host process. When true,
+	// the agent self-daemonizes at spawn time and accepts reattach via a
+	// UNIX socket at WithPersistentDir/<ID>/sock.
+	//
+	// Default false: foreground-mode session, identical to historical behavior.
+	Persistent bool `yaml:"persistent,omitempty"`
+
+	// RingBufferSize is the in-memory PTY output buffer size in bytes,
+	// used to redraw the current screen state on reattach. Only meaningful
+	// when Persistent=true. Zero means "use default 256 KiB at agent startup".
+	RingBufferSize int `yaml:"ring_buffer_size,omitempty"`
 }
 
 // PTYConfig holds pseudo-terminal configuration for a managed process.
@@ -176,6 +188,15 @@ func (s *Spec) Validate() error {
 	}
 	if s.MaxRestarts < 0 {
 		return &SpecValidationError{Field: "MaxRestarts", Value: s.MaxRestarts, Reason: "must be >= 0"}
+	}
+	if s.Persistent {
+		if s.RingBufferSize < 0 {
+			return &SpecValidationError{Field: "RingBufferSize", Value: s.RingBufferSize, Reason: "must be >= 0 when Persistent=true"}
+		}
+		const maxRingBuffer = 64 * 1024 * 1024
+		if s.RingBufferSize > maxRingBuffer {
+			return &SpecValidationError{Field: "RingBufferSize", Value: s.RingBufferSize, Reason: "must be <= 67108864 bytes (64 MiB) when Persistent=true"}
+		}
 	}
 	return nil
 }
