@@ -15,6 +15,19 @@ func WithRuntimeDir(path string) ManagerOption {
 	return func(m *Manager) { m.runtimeDir = path }
 }
 
+// DefaultLogRingBufferBytes is the per-(process, stream) log ring buffer
+// capacity used when neither WithLogRingBufferBytes nor the YAML
+// `log.ring_buffer_bytes` key is set.
+const DefaultLogRingBufferBytes = 1 << 20 // 1 MiB
+
+// WithLogRingBufferBytes overrides the per-(process, stream) log ring
+// buffer capacity. Smaller values reduce memory at the cost of evicting
+// older log lines sooner. Zero or negative values fall back to
+// DefaultLogRingBufferBytes.
+func WithLogRingBufferBytes(n int) ManagerOption {
+	return func(m *Manager) { m.logRingBufferBytes = n }
+}
+
 // WithPersistentDir overrides the directory where persistent-session
 // metadata (sock, pid, meta.json, agent.log) is stored. Default:
 // $HOME/.cliwrap/sessions/. The directory is created with mode 0700

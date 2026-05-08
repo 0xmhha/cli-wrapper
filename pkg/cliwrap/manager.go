@@ -16,10 +16,11 @@ import (
 
 // Manager is the top-level library entry point.
 type Manager struct {
-	agentPath     string
-	runtimeDir    string
-	persistentDir string // CW-G4: dir holding per-session metadata for Persistent=true sessions
-	spawner       *supervise.Spawner
+	agentPath          string
+	runtimeDir         string
+	persistentDir      string // CW-G4: dir holding per-session metadata for Persistent=true sessions
+	logRingBufferBytes int    // 0 = DefaultLogRingBufferBytes
+	spawner            *supervise.Spawner
 
 	mu      sync.Mutex
 	handles map[string]*processHandle

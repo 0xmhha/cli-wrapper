@@ -20,6 +20,10 @@ type RuntimeConfig struct {
 	Dir       string
 	Debug     string // off | info | verbose | trace
 	AgentPath string
+	// LogRingBufferBytes overrides the per-(process, stream) log ring
+	// buffer capacity. Zero means use cliwrap.DefaultLogRingBufferBytes
+	// (1 MiB). YAML key: runtime.log_ring_buffer_bytes.
+	LogRingBufferBytes int
 }
 
 // SystemBudgetConfig mirrors the "system_budget" YAML block.

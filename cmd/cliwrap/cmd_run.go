@@ -40,10 +40,14 @@ func runCommand(args []string) int {
 		agentPath = filepath.Join(filepath.Dir(self), "cliwrap-agent")
 	}
 
-	mgr, err := cliwrap.NewManager(
+	mgrOpts := []cliwrap.ManagerOption{
 		cliwrap.WithAgentPath(agentPath),
 		cliwrap.WithRuntimeDir(cfg.Runtime.Dir),
-	)
+	}
+	if cfg.Runtime.LogRingBufferBytes > 0 {
+		mgrOpts = append(mgrOpts, cliwrap.WithLogRingBufferBytes(cfg.Runtime.LogRingBufferBytes))
+	}
+	mgr, err := cliwrap.NewManager(mgrOpts...)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "cliwrap run: %v\n", err)
 		return 1

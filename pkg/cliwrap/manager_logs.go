@@ -43,12 +43,17 @@ type logWatcher struct {
 }
 
 // ensureCollector returns the lazily-constructed Collector. Thread-safe.
+// The per-(process, stream) ring-buffer capacity comes from
+// WithLogRingBufferBytes when set; otherwise DefaultLogRingBufferBytes
+// (1 MiB) is used.
 func (m *Manager) ensureCollector() *logcollect.Collector {
 	m.logs.collectorOnce.Do(func() {
+		cap := m.logRingBufferBytes
+		if cap <= 0 {
+			cap = DefaultLogRingBufferBytes
+		}
 		m.logs.collector = logcollect.NewCollector(logcollect.CollectorOptions{
-			// 1 MiB per (process, stream) — enough for several thousand
-			// short log lines without unbounded memory growth.
-			RingBufferBytes: 1 << 20,
+			RingBufferBytes: cap,
 		})
 	})
 	return m.logs.collector

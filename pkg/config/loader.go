@@ -69,9 +69,10 @@ type rawConfig struct {
 }
 
 type rawRuntime struct {
-	Dir       string `yaml:"dir"`
-	Debug     string `yaml:"debug"`
-	AgentPath string `yaml:"agent_path"`
+	Dir                string `yaml:"dir"`
+	Debug              string `yaml:"debug"`
+	AgentPath          string `yaml:"agent_path"`
+	LogRingBufferBytes int    `yaml:"log_ring_buffer_bytes"`
 }
 
 type rawSystemBudget struct {
@@ -114,9 +115,10 @@ func (r rawConfig) toCanonical() (*Config, error) {
 	cfg := &Config{
 		Version: r.Version,
 		Runtime: RuntimeConfig{
-			Dir:       r.Runtime.Dir,
-			Debug:     r.Runtime.Debug,
-			AgentPath: r.Runtime.AgentPath,
+			Dir:                r.Runtime.Dir,
+			Debug:              r.Runtime.Debug,
+			AgentPath:          r.Runtime.AgentPath,
+			LogRingBufferBytes: r.Runtime.LogRingBufferBytes,
 		},
 	}
 

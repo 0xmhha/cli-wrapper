@@ -30,6 +30,27 @@ func TestManager_LogsSnapshotRoundTrip(t *testing.T) {
 	require.Nil(t, m.LogsSnapshot("other", 0))
 }
 
+func TestManager_LogRingBufferBytesOptionRespected(t *testing.T) {
+	// 16-byte ring; write 5 chunks of 8 bytes each = 40 bytes total.
+	// Chunk-list eviction keeps newest chunks fitting within capacity.
+	m := &Manager{}
+	WithLogRingBufferBytes(16)(m)
+	for i := 0; i < 5; i++ {
+		m.emitLogChunk("p", 0, []byte("AAAAAAAA")) // 8 bytes
+	}
+	got := m.LogsSnapshot("p", 0)
+	// Expect exactly the last two chunks (16 bytes) — chunk-eviction
+	// drops oldest chunks while totalBytes > capacity, but always
+	// retains at least one chunk.
+	require.LessOrEqual(t, len(got), 16,
+		"snapshot must respect WithLogRingBufferBytes capacity")
+	require.Greater(t, len(got), 0)
+}
+
+func TestManager_LogRingBufferBytes_DefaultIsOneMiB(t *testing.T) {
+	require.Equal(t, 1<<20, DefaultLogRingBufferBytes)
+}
+
 func TestManager_LogsSnapshotIsolatesProcesses(t *testing.T) {
 	m := &Manager{}
 
