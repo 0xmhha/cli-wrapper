@@ -19,11 +19,11 @@
 - [x] ~~추가 sandbox providers — `firejail` (Linux)~~ — DONE 2026-05-08 (commit `6cc22d5`). `pkg/sandbox/providers/firejail/`. profile / netns / nonet / private / noroot / caps_drop / seccomp / whitelist / blacklist.
 - [x] ~~추가 sandbox providers — `sandbox-exec` (macOS)~~ — DONE 2026-05-08 (commit `1472ea4`). `pkg/sandbox/providers/sandboxexec/`. profile (inline) / profile_name / profile_file.
 - [x] ~~Benchmark 회귀 추적 — `benchstat` + CI 스크립트~~ — DONE 2026-05-08 (commit `7f63f07`). Makefile targets bench-pty / bench-baseline / bench-current / bench-compare / bench-tools + `.github/workflows/bench.yml`.
-- [ ] `.github/FUNDING.yml` — 스폰서십 설정 시 (conditional; awaiting sponsorship setup)
+- [x] ~~`.github/FUNDING.yml`~~ — DONE 2026-05-08. `github: [0xmhha]` enabled; other platforms left commented-out for future activation.
 
 ## 🗺️ Roadmap
 
 - [x] ~~cgroups v2 throttling — CPU quota, I/O weight, Linux 전용~~ — DONE (building block) 2026-05-08 (commit `e8846ea`). `internal/cgroup` package: Group with AddPID / SetCPUMax / SetMemoryMax / SetIOWeight / Remove. Linux full impl + non-Linux stub. Runner auto-integration is a follow-up.
-- [ ] Windows 지원 — Named pipes, Job Objects (~1-2주) (still future)
+- [~] Windows 지원 — Named pipes, Job Objects (~1-2주). PARTIAL 2026-05-08: cross-compile foundation landed (`_windows.go` stubs for platform / resource / agent PTY / supervise Spawner; CI windows-build job). Runtime spawn (Named Pipes IPC + Job Objects + ConPTY) is the remaining multi-week port — tracked under CW-P2-5.
 - [x] ~~File-backed log persistence — `rotator.go` 미사용 코드 연결~~ — DONE 2026-05-08 (commit `bfe2b51`). New `internal/logcollect.FileSink` wraps per-(process, stream) FileRotators. Wired via `cliwrap.WithLogFileDir` + YAML `runtime.log_file_dir`.
 - [x] ~~Ring buffer 사이즈 설정~~ — DONE 2026-05-08 (commit `0801b0a`). `cliwrap.WithLogRingBufferBytes` ManagerOption + `runtime.log_ring_buffer_bytes` YAML key + `DefaultLogRingBufferBytes` constant.

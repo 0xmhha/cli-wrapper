@@ -3,6 +3,18 @@
 ## [Unreleased]
 
 ### Added
+- Windows cross-compilation foundation: stub `_windows.go` files for
+  `internal/platform`, `internal/resource`, `internal/agent` (PTY), and
+  `internal/supervise` (Spawner). The non-spawn-touching packages
+  (`internal/ipc`, `internal/mgmt`, `internal/eventbus`, `internal/logcollect`,
+  `internal/cgroup` (returns ErrUnsupportedPlatform), `pkg/cliwrap`, etc.)
+  now build cleanly under `GOOS=windows`. New `windows-build` CI job vets
+  + builds on `windows-latest` to catch accidental Unix-only additions.
+  Runtime support (Named Pipes IPC + Job Objects + ConPTY) remains
+  multi-week roadmap work — the Windows stubs return ErrUnsupportedOnWindows
+  / ErrPTYUnsupportedOnWindows at Spawn / spawnPTY entry points.
+- `.github/FUNDING.yml` with `github: [0xmhha]` enabled and the rest of
+  the supported platforms left as commented-out placeholders.
 - `internal/cgroup` package: cgroup v2 throttling building block (Linux).
   Helper for placing a child PID into a cgroup v2 directory with CPU
   quota (`cpu.max`), memory limit (`memory.max`), and I/O weight

@@ -78,3 +78,23 @@ jobs:
           cache: true
       - name: Fuzz short
         run: make fuzz-short
+
+  # windows-build is build-only: spawner / runner_pty have Unix-only
+  # implementations gated behind //go:build !windows, with stub
+  # _windows.go counterparts so the rest of the codebase compiles.
+  # Runtime support (Named Pipes for IPC, Job Objects for cgroup-equivalent,
+  # ConPTY for PTY) is the multi-week Windows port (CW-P2-5). This job
+  # only catches accidentally-Unix-specific additions to non-spawn pkgs.
+  windows-build:
+    runs-on: windows-latest
+    needs: unit
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.23.x'
+          cache: true
+      - name: Vet
+        run: go vet ./...
+      - name: Build
+        run: go build ./...
