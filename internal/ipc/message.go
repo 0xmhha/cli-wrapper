@@ -134,7 +134,6 @@ type ResumePayload struct {
 // to a persistent session. The host's controller queues this dump and
 // delivers it as the first chunk(s) to the next SubscribePTYData subscriber.
 //
-// Spec: docs/superpowers/specs/2026-05-07-CW-G4-persistent-reattach-design.md
 type PTYRingDumpPayload struct {
 	Bytes []byte `msgpack:"b"`
 }

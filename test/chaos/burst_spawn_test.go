@@ -8,7 +8,6 @@
 // exhaustion (the very state CW-G3 produces). Multiple gates protect the
 // developer's machine. See spec §"Test Strategy → Test safety constraints".
 //
-// Spec: docs/superpowers/specs/2026-05-04-CW-G3-supervision-leak-design.md
 package chaos
 
 import (

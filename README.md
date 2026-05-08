@@ -243,8 +243,8 @@ Environment variables inside YAML values are expanded via `${VAR}` syntax.
  └──────────────────────────┘
 ```
 
-Design goals, trade-offs, and rationale live in
-[`docs/superpowers/specs/2026-04-07-cli-wrapper-design.md`](./docs/superpowers/specs/2026-04-07-cli-wrapper-design.md).
+Design goals, trade-offs, and rationale are recorded in `CHANGELOG.md` and
+the per-feature commit history (`git log`).
 
 ## Project Layout
 

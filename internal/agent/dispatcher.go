@@ -38,7 +38,6 @@ type Dispatcher struct {
 	// on this waitgroup so the agent process does not exit before pending
 	// reaps complete.
 	//
-	// See docs/superpowers/specs/2026-05-04-CW-G3-supervision-leak-design.md
 	// (CW-G3 Change 1).
 	activeRunners sync.WaitGroup
 }
@@ -362,7 +361,6 @@ func ctxWithTimeoutSeconds(n int) (context.Context, context.CancelFunc) {
 // calling it more than once is a no-op rather than a double-decrement panic.
 //
 // Drain blocks on the resulting waitgroup. See CW-G3 spec
-// (docs/superpowers/specs/2026-05-04-CW-G3-supervision-leak-design.md,
 // Change 1) for the contract: agent.Run must not return until every runner
 // has reaped its child, otherwise the host observes a "process leak" while
 // the kernel still holds zombies pending wait4.

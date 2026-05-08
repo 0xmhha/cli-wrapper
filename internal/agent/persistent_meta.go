@@ -20,7 +20,6 @@ import (
 //
 // The Version field is for future schema migrations. v1 is "1.0".
 //
-// Spec: docs/superpowers/specs/2026-05-07-CW-G4-persistent-reattach-design.md
 type PersistentMeta struct {
 	Version   string       `json:"version"`
 	ID        string       `json:"id"`

@@ -209,7 +209,6 @@ func Run(ctx context.Context, cfg Config) error {
 	// runner goroutines mid-wait4 are killed when the agent process exits,
 	// leaving children orphaned to launchd.
 	//
-	// Spec: docs/superpowers/specs/2026-05-04-CW-G3-supervision-leak-design.md
 	drainCtx, drainCancel := context.WithTimeout(context.Background(), 2500*time.Millisecond)
 	_ = d.Drain(drainCtx)
 	drainCancel()

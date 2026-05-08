@@ -12,7 +12,6 @@ import "sync"
 // output_throughput workload (~65 MB/s through cliwrap), this is well
 // below saturation.
 //
-// Spec: docs/superpowers/specs/2026-05-07-CW-G4-persistent-reattach-design.md
 type ringBuffer struct {
 	mu   sync.Mutex
 	data []byte // capacity == size

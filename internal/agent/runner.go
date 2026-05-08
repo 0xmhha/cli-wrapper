@@ -30,7 +30,6 @@ var ErrNoActivePTY = errors.New("agent: no active PTY child")
 // cascade reintroduces CW-G3 (host SIGKILLs agent before runner finishes
 // cmd.Wait → child orphaned).
 //
-// Spec: docs/superpowers/specs/2026-05-04-CW-G3-supervision-leak-design.md
 const defaultStopTimeout = 2 * time.Second
 
 // RunSpec describes the child process to fork/exec.

@@ -15,8 +15,7 @@
   attach at a time (concurrent reattach returns `ErrAlreadyAttached`).
   `h.Stop` on a persistent session terminates the agent and cleans
   sock+pid; `h.Close` releases the host's connection only, leaving the
-  agent alive in detached mode. Spec:
-  `docs/superpowers/specs/2026-05-07-CW-G4-persistent-reattach-design.md`.
+  agent alive in detached mode.
 - First-class PTY support for child processes via `Spec.PTY`.
 - New IPC messages: `MsgPTYData`, `MsgPTYWrite`, `MsgPTYResize`, `MsgPTYSignal`.
 - Capability negotiation handshake (`MsgCapabilityQuery`/`Reply`); host refuses PTY against incompatible agents with `ErrPTYUnsupportedByAgent`.
@@ -47,8 +46,6 @@
   CW-G3's drain-before-conn.Close cascade alignment narrowed the host-
   side cleanup race window enough that per-iteration Conn close completes
   before the next spawn handshake. `burstDefaultN` lifted from 15 to 50.
-  See `docs/superpowers/specs/2026-05-04-CW-G3-supervision-leak-design.md`
-  §"CW-G3.1 RESOLVED".
 
 ## [0.2.0] - 2026-04-09
 
@@ -180,9 +177,7 @@ the first tag whose Release workflow ran cleanly end-to-end.
 
 ### Unchanged from v0.1.0
 - All features, public API, and configuration remain identical to
-  v0.1.0. Only the CI plumbing around lint and DCO changed, plus the
-  addition of the Security Guard Agent design spec under
-  `docs/superpowers/specs/`.
+  v0.1.0. Only the CI plumbing around lint and DCO changed.
 
 ## [0.1.0] - 2026-04-08
 

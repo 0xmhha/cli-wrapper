@@ -25,7 +25,6 @@ const defaultRingBufferSize = 256 * 1024
 // persistentState holds the per-session resources owned by a persistent
 // agent: meta files, UNIX listener, ring buffer, and the attach lock.
 //
-// Spec: docs/superpowers/specs/2026-05-07-CW-G4-persistent-reattach-design.md
 type persistentState struct {
 	sessionDir string
 	listener   *net.UnixListener
