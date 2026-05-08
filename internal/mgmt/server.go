@@ -190,7 +190,11 @@ func (s *Server) handleEventsStream(body []byte, writer *ipc.FrameWriter) {
 	_ = ipc.DecodePayload(body, &req)
 
 	bus := s.opts.Manager.Events()
-	sub := bus.Subscribe(event.Filter{ProcessIDs: req.ProcessIDs})
+	types := make([]event.Type, 0, len(req.Types))
+	for _, t := range req.Types {
+		types = append(types, event.Type(t))
+	}
+	sub := bus.Subscribe(event.Filter{ProcessIDs: req.ProcessIDs, Types: types})
 	defer func() { _ = sub.Close() }()
 
 	for e := range sub.Events() {

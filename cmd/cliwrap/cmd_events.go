@@ -20,6 +20,7 @@ func eventsCommand(args []string) int {
 	fs := flag.NewFlagSet("events", flag.ContinueOnError)
 	runtimeDir := fs.String("runtime-dir", "", "override runtime directory")
 	processFilter := fs.String("process", "", "comma-separated list of process ids to filter; empty = all processes")
+	typeFilter := fs.String("type", "", "comma-separated list of event types to filter (e.g. process.started,process.crashed); empty = all types")
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
@@ -33,7 +34,8 @@ func eventsCommand(args []string) int {
 	defer func() { _ = cli.Close() }()
 
 	payload := mgmt.EventsSubscribePayload{
-		ProcessIDs: parseProcessFilter(*processFilter),
+		ProcessIDs: parseCSV(*processFilter),
+		Types:      parseCSV(*typeFilter),
 	}
 	if err := cli.Stream(mgmt.MsgEventsSubscribe, payload); err != nil {
 		fmt.Fprintf(os.Stderr, "cliwrap events: subscribe: %v\n", err)
@@ -71,9 +73,10 @@ func eventsCommand(args []string) int {
 	}
 }
 
-// parseProcessFilter splits a comma-separated process list into a slice.
-// Empty or whitespace-only input returns nil (meaning "subscribe to all").
-func parseProcessFilter(s string) []string {
+// parseCSV splits a comma-separated list into a slice, trimming whitespace
+// and dropping empty entries. Empty or whitespace-only input returns nil
+// (meaning "no filter; subscribe to all").
+func parseCSV(s string) []string {
 	s = strings.TrimSpace(s)
 	if s == "" {
 		return nil

@@ -278,6 +278,67 @@ func TestServer_EventsSubscribeStreamsFrames(t *testing.T) {
 	<-publishDone
 }
 
+func TestServer_EventsSubscribeTypeFilter(t *testing.T) {
+	defer goleak.VerifyNone(t)
+
+	fm := &fakeManager{}
+	bus := fm.Events().(*eventbus.Bus)
+	defer bus.Close()
+
+	shortDir, err := os.MkdirTemp("", "evttypefilt-")
+	require.NoError(t, err)
+	defer func() { _ = os.RemoveAll(shortDir) }()
+	sockPath := filepath.Join(shortDir, "m.sock")
+	srv, err := NewServer(ServerOptions{SocketPath: sockPath, Manager: fm, SpillerDir: t.TempDir()})
+	require.NoError(t, err)
+	require.NoError(t, srv.Start())
+	defer func() {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+		_ = srv.Close(ctx)
+	}()
+
+	cli, err := Dial(sockPath)
+	require.NoError(t, err)
+	defer func() { _ = cli.Close() }()
+
+	// Subscribe ONLY to process.crashed events. process.stopped events
+	// must be filtered out server-side.
+	require.NoError(t, cli.Stream(MsgEventsSubscribe, EventsSubscribePayload{
+		Types: []string{string(event.TypeProcessCrashed)},
+	}))
+
+	// Continuously publish a mix of stopped + crashed events; the client
+	// should only ever receive crashed.
+	stopPublishing := make(chan struct{})
+	publishDone := make(chan struct{})
+	go func() {
+		defer close(publishDone)
+		ticker := time.NewTicker(10 * time.Millisecond)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-stopPublishing:
+				return
+			case <-ticker.C:
+				bus.Publish(event.NewProcessStopped("p-other", time.Now(), 0))
+				bus.Publish(event.NewProcessCrashed("p-target", time.Now(), event.CrashContext{}, false, 0))
+			}
+		}
+	}()
+
+	h, body, err := cli.ReadFrame()
+	require.NoError(t, err)
+	require.Equal(t, MsgEventsStream, h.MsgType)
+	var p EventsStreamPayload
+	require.NoError(t, ipc.DecodePayload(body, &p))
+	require.Equal(t, string(event.TypeProcessCrashed), p.Type,
+		"server must filter out non-matching event types")
+
+	close(stopPublishing)
+	<-publishDone
+}
+
 func TestServer_LogsRequestFollowStreamsFrames(t *testing.T) {
 	defer goleak.VerifyNone(t)
 

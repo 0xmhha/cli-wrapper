@@ -87,9 +87,12 @@ type LogsStreamPayload struct {
 }
 
 // EventsSubscribePayload is sent by a client to subscribe to a stream of
-// lifecycle events. An empty ProcessIDs slice subscribes to every process.
+// lifecycle events. An empty ProcessIDs slice subscribes to every process;
+// an empty Types slice subscribes to every event type. Both filters compose
+// (logical AND): an event must match every non-empty filter slice.
 type EventsSubscribePayload struct {
 	ProcessIDs []string `msgpack:"pids"`
+	Types      []string `msgpack:"types,omitempty"`
 }
 
 // EventsStreamPayload carries a serialized event summary.
