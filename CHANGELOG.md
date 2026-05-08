@@ -3,6 +3,37 @@
 ## [Unreleased]
 
 ### Added
+- `internal/cgroup` package: cgroup v2 throttling building block (Linux).
+  Helper for placing a child PID into a cgroup v2 directory with CPU
+  quota (`cpu.max`), memory limit (`memory.max`), and I/O weight
+  (`io.weight`). Non-Linux builds receive a stub returning
+  `ErrUnsupportedPlatform`. Runner integration is a follow-up.
+- `firejail` sandbox provider at `pkg/sandbox/providers/firejail/`.
+  Linux-only. Wraps the SUID-root firejail binary (seccomp + caps drop +
+  namespace isolation). Configurable via `SandboxSpec.Config`:
+  `profile`, `netns`, `nonet`, `private`, `noroot`, `whitelist`,
+  `blacklist`, `caps_drop`, `seccomp`.
+- `sandbox-exec` sandbox provider at `pkg/sandbox/providers/sandboxexec/`.
+  macOS-only. Wraps the deprecated-but-functional `sandbox-exec` binary;
+  accepts a Scheme profile inline (materialized to a temp file), by
+  built-in name (`profile_name`), or by file path (`profile_file`).
+- File-backed log persistence: `cliwrap.WithLogFileDir(dir)` and the
+  matching `runtime.log_file_dir` YAML key. When set, every log chunk
+  is also written to `<dir>/<processID>.<stream>.log` via FileRotator
+  alongside the in-memory ring buffer. `WithLogFileRotation(maxSize,
+  maxFiles)` overrides per-rotator defaults.
+- Log ring buffer size is now configurable: `cliwrap.WithLogRingBufferBytes`
+  ManagerOption + `runtime.log_ring_buffer_bytes` YAML key.
+  `cliwrap.DefaultLogRingBufferBytes` constant (1 MiB) preserves
+  pre-existing behavior when unset.
+- `cliwrap events --type` flag to filter the event stream by type
+  (CSV; e.g. `--type=process.crashed,process.failed`). Wires
+  `EventsSubscribePayload.Types` through to `event.Filter.Types`.
+- Benchmark regression tracking: `make bench-pty / bench-baseline /
+  bench-current / bench-compare / bench-tools` Makefile targets and a
+  GitHub Actions workflow (`.github/workflows/bench.yml`) that runs the
+  default (untagged) benchmarks on every push and PR, uploading output
+  as a 30-day artifact for local benchstat comparison.
 - `bubblewrap` sandbox provider at `pkg/sandbox/providers/bubblewrap/`.
   Linux-only (returns `ErrUnsupportedPlatform` elsewhere); requires
   `bwrap` on PATH at construction (`ErrBwrapNotFound` otherwise).

@@ -15,14 +15,15 @@
 
 ## 🟢 Low
 
-- [ ] `cliwrap events --type` 필터 — `event.Filter.Types` 이미 존재, CLI flag + wire field 추가 (~2시간)
-- [ ] 추가 sandbox providers — `firejail` (Linux), `sandbox-exec` (macOS) (각 ~1일)
-- [ ] Benchmark 회귀 추적 — `benchstat` + CI 스크립트 (~반일)
-- [ ] `.github/FUNDING.yml` — 스폰서십 설정 시
+- [x] ~~`cliwrap events --type` 필터~~ — DONE 2026-05-08 (commit `7920aa2`).
+- [x] ~~추가 sandbox providers — `firejail` (Linux)~~ — DONE 2026-05-08 (commit `6cc22d5`). `pkg/sandbox/providers/firejail/`. profile / netns / nonet / private / noroot / caps_drop / seccomp / whitelist / blacklist.
+- [x] ~~추가 sandbox providers — `sandbox-exec` (macOS)~~ — DONE 2026-05-08 (commit `1472ea4`). `pkg/sandbox/providers/sandboxexec/`. profile (inline) / profile_name / profile_file.
+- [x] ~~Benchmark 회귀 추적 — `benchstat` + CI 스크립트~~ — DONE 2026-05-08 (commit `7f63f07`). Makefile targets bench-pty / bench-baseline / bench-current / bench-compare / bench-tools + `.github/workflows/bench.yml`.
+- [ ] `.github/FUNDING.yml` — 스폰서십 설정 시 (conditional; awaiting sponsorship setup)
 
 ## 🗺️ Roadmap
 
-- [ ] cgroups v2 throttling — CPU quota, I/O weight, Linux 전용 (~2-3일)
-- [ ] Windows 지원 — Named pipes, Job Objects (~1-2주)
-- [ ] File-backed log persistence — `rotator.go` 미사용 코드 연결 (~반일)
-- [ ] Ring buffer 사이즈 설정 — 현재 1 MiB 하드코딩 → `ManagerOption` + YAML key (~2시간)
+- [x] ~~cgroups v2 throttling — CPU quota, I/O weight, Linux 전용~~ — DONE (building block) 2026-05-08 (commit `e8846ea`). `internal/cgroup` package: Group with AddPID / SetCPUMax / SetMemoryMax / SetIOWeight / Remove. Linux full impl + non-Linux stub. Runner auto-integration is a follow-up.
+- [ ] Windows 지원 — Named pipes, Job Objects (~1-2주) (still future)
+- [x] ~~File-backed log persistence — `rotator.go` 미사용 코드 연결~~ — DONE 2026-05-08 (commit `bfe2b51`). New `internal/logcollect.FileSink` wraps per-(process, stream) FileRotators. Wired via `cliwrap.WithLogFileDir` + YAML `runtime.log_file_dir`.
+- [x] ~~Ring buffer 사이즈 설정~~ — DONE 2026-05-08 (commit `0801b0a`). `cliwrap.WithLogRingBufferBytes` ManagerOption + `runtime.log_ring_buffer_bytes` YAML key + `DefaultLogRingBufferBytes` constant.
