@@ -10,11 +10,27 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/0xmhha/cli-wrapper/internal/cwtypes"
 	"github.com/0xmhha/cli-wrapper/internal/ipc"
 	"github.com/0xmhha/cli-wrapper/pkg/event"
 )
+
+// snapshotForRequest selects the right Manager snapshot method based on
+// whether the request carries any filters. Plain Snapshot is preferred
+// when no filters are set so unaltered byte-for-byte behaviour is preserved
+// for legacy clients.
+func snapshotForRequest(m ManagerAPI, req LogsRequestPayload) []byte {
+	if req.SinceUnixNano == 0 && req.Lines == 0 {
+		return m.LogsSnapshot(req.ID, req.Stream)
+	}
+	var since time.Time
+	if req.SinceUnixNano != 0 {
+		since = time.Unix(0, req.SinceUnixNano)
+	}
+	return m.LogsSnapshotFiltered(req.ID, req.Stream, since, req.Lines)
+}
 
 // ManagerAPI is the subset of Manager functionality the server exposes.
 // Using an interface keeps tests decoupled from the concrete Manager.
@@ -23,6 +39,11 @@ type ManagerAPI interface {
 	StatusOf(id string) (ListEntry, error)
 	Stop(ctx context.Context, id string) error
 	LogsSnapshot(id string, stream uint8) []byte
+	// LogsSnapshotFiltered returns a snapshot whose chunks have arrival
+	// timestamp >= since (zero disables) and is trimmed to the trailing
+	// `lines` newline-delimited lines (zero disables). When both filters
+	// are zero this is equivalent to LogsSnapshot.
+	LogsSnapshotFiltered(id string, stream uint8, since time.Time, lines int) []byte
 	// WatchLogs returns a channel that delivers every log chunk
 	// emitted for processID after the subscription is registered,
 	// plus an unregister function the caller MUST invoke exactly
@@ -126,7 +147,7 @@ func (s *Server) handleConn(conn net.Conn) {
 					s.handleLogsFollow(writer, req)
 					return
 				}
-				snap := s.opts.Manager.LogsSnapshot(req.ID, req.Stream)
+				snap := snapshotForRequest(s.opts.Manager, req)
 				if werr := writeLogsStreamFrame(writer, LogsStreamPayload{
 					ID:     req.ID,
 					Stream: req.Stream,
@@ -233,8 +254,10 @@ func (s *Server) handleLogsFollow(writer *ipc.FrameWriter, req LogsRequestPayloa
 		return
 	}
 
-	// Step 1: send the current ring-buffer snapshot.
-	snap := s.opts.Manager.LogsSnapshot(req.ID, req.Stream)
+	// Step 1: send the initial ring-buffer snapshot. Filters apply to
+	// this snapshot; subsequent live chunks are not filtered (they are
+	// new by definition; --lines also doesn't compose with streaming).
+	snap := snapshotForRequest(s.opts.Manager, req)
 	snapPayload := LogsStreamPayload{
 		ID:     req.ID,
 		Stream: req.Stream,

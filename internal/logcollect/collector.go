@@ -2,7 +2,10 @@
 
 package logcollect
 
-import "sync"
+import (
+	"sync"
+	"time"
+)
 
 // CollectorOptions configures the LogCollector.
 type CollectorOptions struct {
@@ -45,6 +48,16 @@ func (c *Collector) Snapshot(processID string, stream uint8) []byte {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.ring.Snapshot(processID, stream)
+}
+
+// SnapshotFiltered returns bytes from chunks whose timestamp is at or after
+// `since` (zero time disables the filter). If `lines > 0`, only the trailing
+// N newline-delimited lines are returned. Backs `cliwrap logs --since` and
+// `--lines`.
+func (c *Collector) SnapshotFiltered(processID string, stream uint8, since time.Time, lines int) []byte {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.ring.SnapshotFiltered(processID, stream, since, lines)
 }
 
 // Close releases resources.

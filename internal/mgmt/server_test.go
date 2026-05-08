@@ -52,6 +52,12 @@ func (f *fakeManager) LogsSnapshot(id string, stream uint8) []byte {
 	return f.logs[id+"/"+string(rune('0'+stream))]
 }
 
+func (f *fakeManager) LogsSnapshotFiltered(id string, stream uint8, _ time.Time, _ int) []byte {
+	// Fake doesn't track timestamps; return the unfiltered snapshot.
+	// Tests that exercise filter semantics use the real Manager.
+	return f.LogsSnapshot(id, stream)
+}
+
 // Events lazily constructs an in-memory event bus and returns it.
 // Tests that want to publish events can call this and then Publish
 // via the returned bus; tests that do not care about events can

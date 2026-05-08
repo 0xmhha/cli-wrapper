@@ -3,6 +3,14 @@
 ## [Unreleased]
 
 ### Added
+- `cliwrap logs --since <duration>` and `--lines N` (alias `-n`) filters.
+  `--since 5m` returns chunks emitted within the last 5 minutes; `--lines 50`
+  returns only the trailing 50 newline-delimited lines. Filters compose: the
+  --since filter is applied first, then --lines trims the result. Filters
+  apply to the snapshot (whether standalone or in `--follow`'s initial
+  snapshot); subsequent live chunks in follow mode are not filtered.
+  Required moving `RingBufferSink` from byte-ring to chunk-list storage so
+  per-chunk arrival timestamps are retained.
 - CW-G4: Persistent sessions + reattach. New `Spec.Persistent` flag opts a
   session into outliving the host process. New `Spec.RingBufferSize`
   controls in-memory PTY scrollback for redraw on reattach. New

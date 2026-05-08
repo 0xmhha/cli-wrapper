@@ -156,3 +156,10 @@ func (m *Manager) logsSnapshotImpl(processID string, stream uint8) []byte {
 	// anything yet) still sees nil instead of a panic.
 	return m.ensureCollector().Snapshot(processID, stream)
 }
+
+// logsSnapshotFilteredImpl is the internal backing implementation for
+// LogsSnapshotFiltered (which adds --since / --lines filters on top of
+// Snapshot).
+func (m *Manager) logsSnapshotFilteredImpl(processID string, stream uint8, since time.Time, lines int) []byte {
+	return m.ensureCollector().SnapshotFiltered(processID, stream, since, lines)
+}

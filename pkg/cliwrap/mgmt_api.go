@@ -4,6 +4,7 @@ package cliwrap
 
 import (
 	"context"
+	"time"
 
 	"github.com/0xmhha/cli-wrapper/internal/mgmt"
 )
@@ -48,6 +49,15 @@ func (m *Manager) LogsSnapshot(id string, stream uint8) []byte {
 	// Thin wrapper — the real implementation lives in manager_logs.go
 	// where the Collector access is co-located with the write path.
 	return m.logsSnapshotImpl(id, stream)
+}
+
+// LogsSnapshotFiltered returns the snapshot filtered by chunk-arrival
+// timestamp (`since`, zero disables) and trimmed to the trailing `lines`
+// newline-delimited lines (zero disables). When both filters are zero
+// it is byte-equivalent to LogsSnapshot. Backs `cliwrap logs --since`
+// and `--lines`.
+func (m *Manager) LogsSnapshotFiltered(id string, stream uint8, since time.Time, lines int) []byte {
+	return m.logsSnapshotFilteredImpl(id, stream, since, lines)
 }
 
 func toListEntry(h *processHandle) mgmt.ListEntry {

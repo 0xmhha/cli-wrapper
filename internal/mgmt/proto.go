@@ -68,6 +68,14 @@ type LogsRequestPayload struct {
 	ID     string `msgpack:"id"`
 	Stream uint8  `msgpack:"s"`
 	Follow bool   `msgpack:"f"`
+	// SinceUnixNano filters the snapshot to chunks whose arrival timestamp
+	// is at or after this Unix-nanosecond instant. Zero (default) disables.
+	// Applies to the initial snapshot only; new chunks pushed in follow
+	// mode are not filtered (they are new by definition).
+	SinceUnixNano int64 `msgpack:"sn,omitempty"`
+	// Lines limits the snapshot to the trailing N newline-delimited lines.
+	// Zero (default) disables. Applies to the initial snapshot only.
+	Lines int `msgpack:"ln,omitempty"`
 }
 
 // LogsStreamPayload carries a single chunk of streamed log bytes.

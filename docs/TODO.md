@@ -9,7 +9,7 @@
 
 ## 🟡 Medium
 
-- [ ] `cliwrap logs --since <duration>` / `--lines N` 필터 — RingBuffer에 line boundary/timestamp 추적 추가 필요 (~1일)
+- [x] ~~`cliwrap logs --since <duration>` / `--lines N` 필터~~ — DONE 2026-05-08. RingBufferSink converted from byte-ring to chunk-list (per-chunk timestamps); new `LogsSnapshotFiltered` API, `LogsRequestPayload.{SinceUnixNano,Lines}` fields, `--since DUR` + `--lines|-n N` flags.
 - [ ] `bubblewrap` sandbox provider — `pkg/sandbox/providers/bubblewrap/` (~1-2일)
 - [x] ~~Logs integration test Phase 2 flake 근본 원인 조사~~ — RESOLVED 2026-05-08 as CW-G5 (commit `ad03e2b`). Root cause: `Seqs().Next() + Outbox.Enqueue()` not atomic; concurrent senders' higher-seq frame enqueues first → receiver's watermark dedup drops lower-seq frame as "duplicate". Fix: `Conn.SendWithNewSeq()` serializes the pair under a mutex.
 

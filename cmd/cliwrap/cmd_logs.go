@@ -9,6 +9,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"time"
 
 	"github.com/0xmhha/cli-wrapper/internal/ipc"
 	"github.com/0xmhha/cli-wrapper/internal/mgmt"
@@ -20,14 +21,21 @@ func logsCommand(args []string) int {
 	stream := fs.String("stream", "all", "which stream to show: stdout | stderr | all")
 	follow := fs.Bool("follow", false, "stream new log chunks as they arrive (tail -f style)")
 	fs.BoolVar(follow, "f", false, "alias for --follow")
+	since := fs.Duration("since", 0, "only return chunks emitted within this duration (e.g. 5m, 1h); 0 = no filter")
+	lines := fs.Int("lines", 0, "only return the last N newline-delimited lines; 0 = no limit")
+	fs.IntVar(lines, "n", 0, "alias for --lines")
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
 	if fs.NArg() < 1 {
-		fmt.Fprintln(os.Stderr, "usage: cliwrap logs [--stream stdout|stderr|all] [--follow|-f] <id>")
+		fmt.Fprintln(os.Stderr, "usage: cliwrap logs [--stream stdout|stderr|all] [--follow|-f] [--since DUR] [--lines|-n N] <id>")
 		return 2
 	}
 	id := fs.Arg(0)
+	var sinceUnixNano int64
+	if *since > 0 {
+		sinceUnixNano = time.Now().Add(-*since).UnixNano()
+	}
 
 	// Resolve which streams to request.
 	streams, err := parseStreamFlag(*stream)
@@ -54,11 +62,11 @@ func logsCommand(args []string) int {
 	defer func() { _ = cli.Close() }()
 
 	if *follow {
-		return followOneStream(cli, id, streams[0])
+		return followOneStream(cli, id, streams[0], sinceUnixNano, *lines)
 	}
 
 	for _, s := range streams {
-		if err := printOneStream(cli, id, s); err != nil {
+		if err := printOneStream(cli, id, s, sinceUnixNano, *lines); err != nil {
 			fmt.Fprintf(os.Stderr, "cliwrap logs: %v\n", err)
 			return 1
 		}
@@ -85,10 +93,12 @@ func parseStreamFlag(v string) ([]uint8, error) {
 // and writes the returned bytes to stdout (for stream 0) or stderr (for
 // stream 1). The stderr routing matches user expectation: `cliwrap logs
 // p1 2>/dev/null` should hide the stderr side of the supervised child.
-func printOneStream(cli *mgmt.Client, id string, stream uint8) error {
+func printOneStream(cli *mgmt.Client, id string, stream uint8, sinceUnixNano int64, lines int) error {
 	_, body, err := cli.Call(mgmt.MsgLogsRequest, mgmt.LogsRequestPayload{
-		ID:     id,
-		Stream: stream,
+		ID:            id,
+		Stream:        stream,
+		SinceUnixNano: sinceUnixNano,
+		Lines:         lines,
 	})
 	if err != nil {
 		return fmt.Errorf("call: %w", err)
@@ -106,11 +116,13 @@ func printOneStream(cli *mgmt.Client, id string, stream uint8) error {
 // followOneStream issues a MsgLogsRequest with Follow=true, prints the
 // initial snapshot frame, then loops reading subsequent stream frames
 // until the server closes the connection or an error occurs.
-func followOneStream(cli *mgmt.Client, id string, stream uint8) int {
+func followOneStream(cli *mgmt.Client, id string, stream uint8, sinceUnixNano int64, lines int) int {
 	if err := cli.Stream(mgmt.MsgLogsRequest, mgmt.LogsRequestPayload{
-		ID:     id,
-		Stream: stream,
-		Follow: true,
+		ID:            id,
+		Stream:        stream,
+		Follow:        true,
+		SinceUnixNano: sinceUnixNano,
+		Lines:         lines,
 	}); err != nil {
 		fmt.Fprintf(os.Stderr, "cliwrap logs: subscribe: %v\n", err)
 		return 1
