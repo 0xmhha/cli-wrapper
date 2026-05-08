@@ -330,6 +330,10 @@ func (d *Dispatcher) installLogSinks(sender chunkSender) {
 }
 
 // SendControl serializes payload and enqueues it as an outbound frame.
+// Uses Conn.SendWithNewSeq so the (seq assignment → outbox enqueue) pair
+// is atomic across concurrent senders; otherwise the receiver's watermark
+// dedup would silently drop the lower-seq frame when a higher-seq one
+// raced ahead. CW-G5.
 func (d *Dispatcher) SendControl(t ipc.MsgType, payload any, ackRequired bool) error {
 	var data []byte
 	var err error
@@ -339,15 +343,11 @@ func (d *Dispatcher) SendControl(t ipc.MsgType, payload any, ackRequired bool) e
 			return err
 		}
 	}
-	h := ipc.Header{
-		MsgType: t,
-		SeqNo:   d.currentConn().Seqs().Next(),
-		Length:  uint32(len(data)),
-	}
+	var flags ipc.Flags
 	if ackRequired {
-		h.Flags |= ipc.FlagAckRequired
+		flags |= ipc.FlagAckRequired
 	}
-	d.currentConn().Send(ipc.OutboxMessage{Header: h, Payload: data})
+	d.currentConn().SendWithNewSeq(t, flags, data)
 	return nil
 }
 

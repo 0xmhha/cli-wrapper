@@ -59,6 +59,13 @@ type Conn struct {
 	disconnectMu sync.Mutex
 	onDisconnect func(error)
 	fireOnce     sync.Once
+
+	// sendMu serializes SendWithNewSeq across goroutines so the (Next() →
+	// Outbox.Enqueue()) pair is atomic. Without it, two concurrent senders
+	// could interleave such that the higher seq enqueues first; the
+	// receiver's watermark dedup would then drop the lower-seq frame as a
+	// "duplicate", silently losing it. See CW-G5.
+	sendMu sync.Mutex
 }
 
 // NewConn constructs a Conn. Call Start() to launch the reader/writer
@@ -145,6 +152,27 @@ func (c *Conn) Start() {
 		go c.readLoop()
 		go c.writeLoop()
 	})
+}
+
+// SendWithNewSeq assigns the next outbound sequence number and enqueues
+// the frame atomically. Use this in preference to Seqs().Next() + Send()
+// from any code path that may race with another sender on the same Conn:
+// without serialization the higher-seq frame can enqueue first, and the
+// receiver's watermark-based DedupTracker silently drops the lower-seq
+// frame as a "duplicate". CW-G5.
+func (c *Conn) SendWithNewSeq(msgType MsgType, flags Flags, payload []byte) bool {
+	c.sendMu.Lock()
+	defer c.sendMu.Unlock()
+	if c.closed.Load() {
+		return false
+	}
+	h := Header{
+		MsgType: msgType,
+		Flags:   flags,
+		SeqNo:   c.seqs.Next(),
+		Length:  uint32(len(payload)),
+	}
+	return c.sp.Outbox().Enqueue(OutboxMessage{Header: h, Payload: payload})
 }
 
 // Send enqueues msg for delivery. Returns false if the conn is closed.

@@ -76,12 +76,7 @@ func (ps *ptySubscribers) fanOut(d PTYData) {
 // interface symmetry and future flow-control; the send is currently
 // non-blocking relative to ctx.
 func (c *Controller) SendPTY(_ context.Context, msgType ipc.MsgType, payload []byte) error {
-	h := ipc.Header{
-		MsgType: msgType,
-		SeqNo:   c.conn.Seqs().Next(),
-		Length:  uint32(len(payload)),
-	}
-	c.conn.Send(ipc.OutboxMessage{Header: h, Payload: payload})
+	c.conn.SendWithNewSeq(msgType, 0, payload)
 	return nil
 }
 

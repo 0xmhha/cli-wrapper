@@ -33,11 +33,9 @@ func TestIntegration_LogsSnapshotCapturesChildOutput(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	// Bound the entire test to 60 s. Phase 1 (10 s) + Phase 2 (30 s) +
-	// deferred Shutdown (5 s) + test overhead can add up to ~50 s on the
-	// slowest observed CI runners (macOS × Go 1.23.x). The 60 s cap is
-	// conservative so the test never races against go test -timeout.
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	// Bound the entire test to 30 s — Phase 1 (10 s) + Phase 2 (5 s) +
+	// deferred Shutdown (5 s) + test overhead leaves comfortable margin.
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	// CRITICAL: defer Shutdown so a test failure (including a fatal
@@ -67,9 +65,7 @@ func TestIntegration_LogsSnapshotCapturesChildOutput(t *testing.T) {
 	// BEFORE the agent has forked the child, so the first log byte is
 	// never immediately available. We must wait for the controller to
 	// observe MsgChildStarted and transition to StateRunning before we
-	// start polling the log buffer — otherwise the log Eventually
-	// budget is consumed by agent spawn + handshake + fork latency
-	// instead of being a pure observation window.
+	// start polling the log buffer.
 	require.Eventually(t, func() bool {
 		return h.Status().State == cliwrap.StateRunning
 	}, 10*time.Second, 50*time.Millisecond,
@@ -77,18 +73,17 @@ func TestIntegration_LogsSnapshotCapturesChildOutput(t *testing.T) {
 
 	// Phase 2: fixture-noisy writes "out N" / "err N" every 100 ms.
 	// Now that the child is guaranteed running, the first chunk should
-	// arrive well within a few hundred milliseconds. We use a very
-	// generous 30 s budget because CI macOS runners have shown latency
-	// spikes where the IPC layer takes 10+ seconds to flush the first
-	// MsgLogChunk frame through the agent → controller → collector
-	// pipeline, even though the child is already confirmed Running.
+	// arrive within a few hundred milliseconds. Pre-CW-G5 a Next()→Send()
+	// race would silently drop the first stdout MsgLogChunk frame on
+	// ~2% of -race runs (stderr's higher seq advanced the receiver's
+	// dedup watermark past stdout's lower seq). 5 s budget is comfortable.
 	require.Eventually(t, func() bool {
 		stdout := mgr.LogsSnapshot("noisy", 0)
 		stderr := mgr.LogsSnapshot("noisy", 1)
 		return bytes.Contains(stdout, []byte("out 0")) &&
 			bytes.Contains(stderr, []byte("err 0"))
-	}, 30*time.Second, 100*time.Millisecond,
-		"expected fixture-noisy output to appear in log ring buffer within 30 s")
+	}, 5*time.Second, 50*time.Millisecond,
+		"expected fixture-noisy output to appear in log ring buffer within 5 s")
 
 	// Snapshot both streams and assert sanity:
 	// stdout should contain "out " prefix lines, stderr should contain "err ".

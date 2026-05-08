@@ -26,6 +26,18 @@
 - Benchmarks for PTY throughput and keystroke round-trip latency.
 
 ### Fixed
+- CW-G5: silent first-frame loss on concurrent senders. `Seqs().Next()`
+  followed by `Outbox.Enqueue()` was not atomic, so two goroutines could
+  interleave such that the higher-seq frame enqueued first; the
+  receiver's watermark `DedupTracker` then dropped the lower-seq frame
+  as a "duplicate", silently losing it. Surfaced as a ~2% flake in
+  `TestIntegration_LogsSnapshotCapturesChildOutput` under `-race` where
+  fixture-noisy's first stdout chunk could be dropped while stderr
+  arrived normally. Fix: new `Conn.SendWithNewSeq(msgType, flags, payload)`
+  that performs sequence assignment and outbox enqueue under a single
+  mutex; updated the three call sites in `agent/dispatcher.go`,
+  `controller/controller.go`, `controller/pty.go`. The integration test's
+  Phase-2 budget tightened from 30 s back to 5 s.
 - CW-G1: cliwrap-agent crashes are now detected by the host within ~50ms.
   `ipc.Conn` fires a new `SetOnDisconnect` callback on socket EOF /
   unrecoverable read error; the controller transitions to `StateCrashed`

@@ -283,11 +283,11 @@ func (c *Controller) send(t ipc.MsgType, payload any, ack bool) error {
 		}
 		data = b
 	}
-	h := ipc.Header{MsgType: t, SeqNo: c.conn.Seqs().Next(), Length: uint32(len(data))}
+	var flags ipc.Flags
 	if ack {
-		h.Flags |= ipc.FlagAckRequired
+		flags |= ipc.FlagAckRequired
 	}
-	c.conn.Send(ipc.OutboxMessage{Header: h, Payload: data})
+	c.conn.SendWithNewSeq(t, flags, data)
 	return nil
 }
 
