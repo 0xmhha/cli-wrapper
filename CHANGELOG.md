@@ -3,6 +3,15 @@
 ## [Unreleased]
 
 ### Added
+- `bubblewrap` sandbox provider at `pkg/sandbox/providers/bubblewrap/`.
+  Linux-only (returns `ErrUnsupportedPlatform` elsewhere); requires
+  `bwrap` on PATH at construction (`ErrBwrapNotFound` otherwise).
+  Defaults: read-only host root, fresh `/tmp` (tmpfs), fresh `/proc`
+  and `/dev`, full namespace isolation (`--unshare-all`), no network,
+  `--die-with-parent`. Configurable via `cwtypes.SandboxSpec.Config`
+  (`network bool`, `bind_rw []string`, `bind_ro []string`, `chdir string`).
+  Argv assembly is unit-tested on every platform; namespace exec is
+  exercised on Linux when `bwrap` is available.
 - `cliwrap logs --since <duration>` and `--lines N` (alias `-n`) filters.
   `--since 5m` returns chunks emitted within the last 5 minutes; `--lines 50`
   returns only the trailing 50 newline-delimited lines. Filters compose: the
