@@ -45,16 +45,23 @@ type logWatcher struct {
 // ensureCollector returns the lazily-constructed Collector. Thread-safe.
 // The per-(process, stream) ring-buffer capacity comes from
 // WithLogRingBufferBytes when set; otherwise DefaultLogRingBufferBytes
-// (1 MiB) is used.
+// (1 MiB) is used. When WithLogFileDir is set, a FileSink is added so
+// chunks are also persisted to disk (rotated per-stream).
 func (m *Manager) ensureCollector() *logcollect.Collector {
 	m.logs.collectorOnce.Do(func() {
 		cap := m.logRingBufferBytes
 		if cap <= 0 {
 			cap = DefaultLogRingBufferBytes
 		}
-		m.logs.collector = logcollect.NewCollector(logcollect.CollectorOptions{
-			RingBufferBytes: cap,
-		})
+		opts := logcollect.CollectorOptions{RingBufferBytes: cap}
+		if m.logFileDir != "" {
+			opts.ExtraSinks = append(opts.ExtraSinks, logcollect.NewFileSink(logcollect.FileSinkOptions{
+				Dir:      m.logFileDir,
+				MaxSize:  m.logFileMaxSize,
+				MaxFiles: m.logFileMaxFiles,
+			}))
+		}
+		m.logs.collector = logcollect.NewCollector(opts)
 	})
 	return m.logs.collector
 }

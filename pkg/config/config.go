@@ -24,6 +24,18 @@ type RuntimeConfig struct {
 	// buffer capacity. Zero means use cliwrap.DefaultLogRingBufferBytes
 	// (1 MiB). YAML key: runtime.log_ring_buffer_bytes.
 	LogRingBufferBytes int
+	// LogFileDir enables file-backed log persistence under the given
+	// directory. Empty means in-memory only (default).
+	// YAML key: runtime.log_file_dir.
+	LogFileDir string
+	// LogFileMaxSize overrides the per-rotator size cap (bytes) when
+	// LogFileDir is set. Zero falls back to FileRotator default (64 MiB).
+	// YAML key: runtime.log_file_max_size.
+	LogFileMaxSize int64
+	// LogFileMaxFiles overrides the per-rotator retention count.
+	// Zero falls back to FileRotator default (7).
+	// YAML key: runtime.log_file_max_files.
+	LogFileMaxFiles int
 }
 
 // SystemBudgetConfig mirrors the "system_budget" YAML block.

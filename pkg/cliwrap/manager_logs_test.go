@@ -3,6 +3,8 @@
 package cliwrap
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -49,6 +51,26 @@ func TestManager_LogRingBufferBytesOptionRespected(t *testing.T) {
 
 func TestManager_LogRingBufferBytes_DefaultIsOneMiB(t *testing.T) {
 	require.Equal(t, 1<<20, DefaultLogRingBufferBytes)
+}
+
+func TestManager_WithLogFileDir_PersistsChunks(t *testing.T) {
+	dir := t.TempDir()
+	m := &Manager{}
+	WithLogFileDir(dir)(m)
+
+	m.emitLogChunk("redis", 0, []byte("hello\n"))
+	m.emitLogChunk("redis", 1, []byte("oops\n"))
+
+	stdout, err := os.ReadFile(filepath.Join(dir, "redis.0.log"))
+	require.NoError(t, err)
+	require.Equal(t, "hello\n", string(stdout))
+
+	stderr, err := os.ReadFile(filepath.Join(dir, "redis.1.log"))
+	require.NoError(t, err)
+	require.Equal(t, "oops\n", string(stderr))
+
+	// In-memory snapshot still works alongside file persistence.
+	require.Equal(t, "hello\n", string(m.LogsSnapshot("redis", 0)))
 }
 
 func TestManager_LogsSnapshotIsolatesProcesses(t *testing.T) {

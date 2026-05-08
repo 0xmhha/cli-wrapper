@@ -20,6 +20,9 @@ type Manager struct {
 	runtimeDir         string
 	persistentDir      string // CW-G4: dir holding per-session metadata for Persistent=true sessions
 	logRingBufferBytes int    // 0 = DefaultLogRingBufferBytes
+	logFileDir         string // "" = disabled
+	logFileMaxSize     int64  // 0 = FileRotator default
+	logFileMaxFiles    int    // 0 = FileRotator default
 	spawner            *supervise.Spawner
 
 	mu      sync.Mutex

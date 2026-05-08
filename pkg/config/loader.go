@@ -73,6 +73,9 @@ type rawRuntime struct {
 	Debug              string `yaml:"debug"`
 	AgentPath          string `yaml:"agent_path"`
 	LogRingBufferBytes int    `yaml:"log_ring_buffer_bytes"`
+	LogFileDir         string `yaml:"log_file_dir"`
+	LogFileMaxSize     int64  `yaml:"log_file_max_size"`
+	LogFileMaxFiles    int    `yaml:"log_file_max_files"`
 }
 
 type rawSystemBudget struct {
@@ -119,6 +122,9 @@ func (r rawConfig) toCanonical() (*Config, error) {
 			Debug:              r.Runtime.Debug,
 			AgentPath:          r.Runtime.AgentPath,
 			LogRingBufferBytes: r.Runtime.LogRingBufferBytes,
+			LogFileDir:         r.Runtime.LogFileDir,
+			LogFileMaxSize:     r.Runtime.LogFileMaxSize,
+			LogFileMaxFiles:    r.Runtime.LogFileMaxFiles,
 		},
 	}
 

@@ -47,6 +47,12 @@ func runCommand(args []string) int {
 	if cfg.Runtime.LogRingBufferBytes > 0 {
 		mgrOpts = append(mgrOpts, cliwrap.WithLogRingBufferBytes(cfg.Runtime.LogRingBufferBytes))
 	}
+	if cfg.Runtime.LogFileDir != "" {
+		mgrOpts = append(mgrOpts, cliwrap.WithLogFileDir(cfg.Runtime.LogFileDir))
+		if cfg.Runtime.LogFileMaxSize > 0 || cfg.Runtime.LogFileMaxFiles > 0 {
+			mgrOpts = append(mgrOpts, cliwrap.WithLogFileRotation(cfg.Runtime.LogFileMaxSize, cfg.Runtime.LogFileMaxFiles))
+		}
+	}
 	mgr, err := cliwrap.NewManager(mgrOpts...)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "cliwrap run: %v\n", err)
