@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-05-09
+
 ### Added
 - Windows cross-compilation foundation: stub `_windows.go` files for
   `internal/platform`, `internal/resource`, `internal/agent` (PTY), and
