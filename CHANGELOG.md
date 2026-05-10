@@ -2,7 +2,22 @@
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-05-10
+
 ### Added
+- `ProcessHandle.OnStateChange(cb func(Status))` — event-driven hook
+  that fires whenever the controller transitions to a new state
+  (StateStarting → StateRunning → StateStopping/Stopped/Crashed/...).
+  Callbacks fire on actual transitions only; same-value setState
+  calls are filtered. Pass nil to disable. The callback may be
+  registered before or after Start (pre-Start is buffered until
+  Start wires it onto the controller). Hosts use this to react to
+  child exit / crash without polling — a 1 s poll per attached
+  session was the previous pattern, now zero idle CPU.
+  Also exposed at the controller level via
+  `Controller.SetOnStateChange`. All in-package state transitions
+  now route through a centralised `setState` helper so callbacks
+  never miss a transition.
 - `cliwrap.WithoutWAL()` and `cliwrap.WithOutboxCapacity(n)` ManagerOptions
   for interactive PTY hosts. The legacy 1024-slot in-memory outbox plus the
   256 MiB on-disk WAL exist to honor a "messages are never lost" guarantee
