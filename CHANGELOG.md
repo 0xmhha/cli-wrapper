@@ -2,6 +2,42 @@
 
 ## [Unreleased]
 
+### Added
+- `cliwrap.WithoutWAL()` and `cliwrap.WithOutboxCapacity(n)` ManagerOptions
+  for interactive PTY hosts. The legacy 1024-slot in-memory outbox plus the
+  256 MiB on-disk WAL exist to honor a "messages are never lost" guarantee
+  under bursty traffic, but the fsync-per-overflow path it falls back to
+  scales with disk latency and produces an "input gets slower the longer I
+  type" mode in raw-mode TUIs. The new options let hosts opt into a
+  larger in-memory buffer and skip the disk path entirely, accepting the
+  rare-drop trade-off in exchange for predictable per-keystroke latency.
+  Default behavior (WAL on, capacity 1024) is preserved for batch /
+  replay-critical callers.
+- `ipc.NewInMemorySpiller(capacity)` — internal constructor that backs the
+  WithoutWAL path. Outbox is created with a nil spill function so overflow
+  drops messages instead of fsync-spilling. Spiller methods are nil-WAL
+  safe (Ack and ReplayInto are no-ops; Close releases the outbox only).
+- `ipc.ConnConfig.DisableWAL bool` — surface for callers that construct
+  ipc.Conn directly. SpillerDir / WALBytes are ignored when set.
+- `controller.ControllerOptions.OutboxCapacity` and `DisableWAL` —
+  ControllerOptions and ReattachOptions both expose the knobs so the
+  cliwrap.Manager can plumb host-level configuration through to both
+  fresh-spawn and reattach paths.
+- `Makefile` build targets: `make build` (all binaries), `make build-agent`
+  (cliwrap-agent only), `make build-cliwrap` (host CLI only), `make clean`
+  (remove `bin/`). Replaces the implicit `go build -o bin/...` ritual
+  downstream tooling had to remember.
+
+### Fixed
+- (test infrastructure) Integration tests now self-build their fixture
+  binaries via the new `BuildFixtureForTest(t, name)` helper instead of
+  relying on a prior `make fixtures` invocation. Without that helper, a
+  missing `test/fixtures/bin/<name>` produced cryptic "process should
+  reach Running state" timeouts because the agent's exec of the
+  non-existent path silently failed and nothing wired the cause back to
+  the test. `go test ./test/integration/...` is now self-contained;
+  removing `test/fixtures/bin/` entirely no longer breaks the suite.
+
 ## [0.3.0] - 2026-05-09
 
 ### Added
