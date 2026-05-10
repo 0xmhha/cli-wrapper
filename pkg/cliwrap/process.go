@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/0xmhha/cli-wrapper/internal/controller"
+	"github.com/0xmhha/cli-wrapper/internal/cwtypes"
 	"github.com/0xmhha/cli-wrapper/internal/ipc"
 )
 
@@ -42,6 +43,27 @@ type ProcessHandle interface {
 	// If Spec.PTY is nil the returned channel is immediately closed.
 	// The caller MUST invoke the returned unsubscribe function exactly once.
 	SubscribePTYData() (<-chan PTYData, func())
+
+	// OnStateChange registers cb to be called every time the underlying
+	// controller transitions to a new state (StateStarting →
+	// StateRunning → StateStopping/Stopped/Crashed/...). The callback
+	// fires only on actual transitions; same-value re-stores are
+	// filtered out. Pass nil to disable. Replacing an existing callback
+	// is supported and atomic with respect to in-flight transitions.
+	//
+	// The callback may be registered before or after Start; in the
+	// pre-Start case it is buffered until Start wires it onto the
+	// controller, so even the StateStarting → StateRunning transition
+	// is observable.
+	//
+	// The callback runs on whichever goroutine triggered the transition
+	// (typically the IPC dispatch loop or the Start/Stop call itself),
+	// so it MUST NOT block. Hosts that need to do heavy work should
+	// hand off to a separate goroutine.
+	//
+	// The Status passed to the callback reflects the freshly-updated
+	// state at call time; ChildPID is the value at that instant.
+	OnStateChange(cb func(Status))
 }
 
 type processHandle struct {
@@ -51,6 +73,13 @@ type processHandle struct {
 	mu         sync.Mutex
 	ctrl       *controller.Controller
 	lastStatus Status
+
+	// onStateChangeCb is the host-supplied callback registered via
+	// OnStateChange. When ctrl is nil (pre-Start) it is held here and
+	// wired onto the freshly-constructed controller in Start. Protected
+	// by mu (covers both fields together so wireOnStateChange runs
+	// atomically with respect to ctrl assignment).
+	onStateChangeCb func(Status)
 
 	nextSeq atomic.Uint64
 }
@@ -84,6 +113,16 @@ func (p *processHandle) Start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	// Wire any callback that was registered before Start so the
+	// StateStarting → StateRunning transition is observable. The
+	// controller's setState is safe to call concurrently with this;
+	// SetOnStateChange takes its own lock.
+	if p.onStateChangeCb != nil {
+		hostCb := p.onStateChangeCb
+		ctrl.SetOnStateChange(func(s cwtypes.State) {
+			hostCb(Status{State: s, ChildPID: ctrl.ChildPID()})
+		})
+	}
 	if err := ctrl.Start(ctx); err != nil {
 		return err
 	}
@@ -96,6 +135,26 @@ func (p *processHandle) Start(ctx context.Context) error {
 	}
 	p.ctrl = ctrl
 	return nil
+}
+
+func (p *processHandle) OnStateChange(cb func(Status)) {
+	p.mu.Lock()
+	p.onStateChangeCb = cb
+	ctrl := p.ctrl
+	p.mu.Unlock()
+
+	// If the controller is already running, wire the callback through
+	// directly so transitions that happen after this call fire it. If
+	// not, Start will wire it when ctrl is constructed.
+	if ctrl != nil {
+		if cb == nil {
+			ctrl.SetOnStateChange(nil)
+			return
+		}
+		ctrl.SetOnStateChange(func(s cwtypes.State) {
+			cb(Status{State: s, ChildPID: ctrl.ChildPID()})
+		})
+	}
 }
 
 func (p *processHandle) Stop(ctx context.Context) error {

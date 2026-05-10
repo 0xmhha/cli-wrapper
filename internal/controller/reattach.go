@@ -95,11 +95,11 @@ func NewControllerFromReattach(opts ReattachOptions) (*Controller, error) {
 	conn.OnMessage(c.handleMessage)
 	conn.SetOnDisconnect(func(_ error) {
 		c.crashSource.Store(int32(CrashSourceConnectionLost))
-		c.state.Store(int32(cwtypes.StateCrashed))
+		c.setState(cwtypes.StateCrashed)
 	})
 	conn.Start()
 
-	c.state.Store(int32(cwtypes.StateRunning))
+	c.setState(cwtypes.StateRunning)
 	return c, nil
 }
 

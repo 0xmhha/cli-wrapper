@@ -67,6 +67,14 @@ type Controller struct {
 
 	ptySubs ptySubscribers // fan-out for inbound MsgTypePTYData frames
 
+	// onStateChangeMu guards onStateChange. The callback is invoked from
+	// setState whenever the controller's state actually transitions to a
+	// new value. Hosts use this to react to child exit / crash without
+	// polling. The callback runs on whichever goroutine called setState
+	// (typically the IPC dispatch loop), so callbacks MUST NOT block.
+	onStateChangeMu sync.Mutex
+	onStateChange   func(cwtypes.State)
+
 	// CW-G4: when reattaching to a persistent session, the agent emits
 	// MsgPTYRingDump with the ring buffer snapshot. Stored here until the
 	// next SubscribePTYData subscriber drains it. Subsequent subscribers
@@ -78,6 +86,40 @@ type Controller struct {
 	closeErr error
 }
 
+// SetOnStateChange registers cb to be called every time the controller's
+// state transitions to a new value. The callback is also invoked when
+// setState is called with the same value as the current state? No —
+// duplicate transitions are filtered: cb fires only when old != new.
+// Pass nil to disable. Replacing an existing callback is supported and
+// atomic with respect to setState.
+//
+// The callback runs on the goroutine that triggered the transition —
+// usually the IPC dispatch loop or a host-initiated Start/Stop call —
+// so it MUST NOT block. Hosts that need to do heavy work should hand
+// off to a separate goroutine.
+func (c *Controller) SetOnStateChange(cb func(cwtypes.State)) {
+	c.onStateChangeMu.Lock()
+	c.onStateChange = cb
+	c.onStateChangeMu.Unlock()
+}
+
+// setState swaps the controller's state and fires the registered
+// OnStateChange callback when (and only when) the value actually
+// changed. All in-package state transitions go through this helper so
+// callbacks never miss a transition and never fire on no-ops.
+func (c *Controller) setState(s cwtypes.State) {
+	old := c.state.Swap(int32(s))
+	if int32(old) == int32(s) {
+		return
+	}
+	c.onStateChangeMu.Lock()
+	cb := c.onStateChange
+	c.onStateChangeMu.Unlock()
+	if cb != nil {
+		cb(s)
+	}
+}
+
 // NewController constructs a Controller.
 func NewController(opts ControllerOptions) (*Controller, error) {
 	if opts.Spawner == nil {
@@ -87,7 +129,7 @@ func NewController(opts ControllerOptions) (*Controller, error) {
 		return nil, errors.New("controller: RuntimeDir is required")
 	}
 	c := &Controller{opts: opts}
-	c.state.Store(int32(cwtypes.StatePending))
+	c.setState(cwtypes.StatePending)
 	return c, nil
 }
 
@@ -117,7 +159,7 @@ func (c *Controller) ChildPID() int {
 
 // Start spawns the agent and issues START_CHILD.
 func (c *Controller) Start(ctx context.Context) error {
-	c.state.Store(int32(cwtypes.StateStarting))
+	c.setState(cwtypes.StateStarting)
 
 	// CW-G4: pass persistence intent through Spawn options. SessionDir
 	// is the per-session metadata dir under WithPersistentDir.
@@ -127,7 +169,7 @@ func (c *Controller) Start(ctx context.Context) error {
 	}
 	handle, err := c.opts.Spawner.Spawn(ctx, c.opts.Spec.ID, spawnOpts)
 	if err != nil {
-		c.state.Store(int32(cwtypes.StateCrashed))
+		c.setState(cwtypes.StateCrashed)
 		return fmt.Errorf("controller start: %w", err)
 	}
 	c.handle = handle
@@ -145,7 +187,7 @@ func (c *Controller) Start(ctx context.Context) error {
 	})
 	if err != nil {
 		_ = handle.Close()
-		c.state.Store(int32(cwtypes.StateCrashed))
+		c.setState(cwtypes.StateCrashed)
 		return fmt.Errorf("controller conn: %w", err)
 	}
 	c.conn = conn
@@ -157,7 +199,7 @@ func (c *Controller) Start(ctx context.Context) error {
 	conn.OnMessage(c.handleMessage)
 	conn.SetOnDisconnect(func(_ error) {
 		c.crashSource.Store(int32(CrashSourceConnectionLost))
-		c.state.Store(int32(cwtypes.StateCrashed))
+		c.setState(cwtypes.StateCrashed)
 	})
 	conn.Start()
 
@@ -169,14 +211,14 @@ func (c *Controller) Start(ctx context.Context) error {
 	// treat a timeout as "no features" for backward compatibility.
 	if err := c.negotiateCapabilities(ctx); err != nil {
 		_ = handle.Close()
-		c.state.Store(int32(cwtypes.StateCrashed))
+		c.setState(cwtypes.StateCrashed)
 		return fmt.Errorf("controller capability negotiation: %w", err)
 	}
 
 	// Refuse PTY mode if the agent does not advertise the "pty" feature.
 	if c.opts.Spec.PTY != nil && !c.AgentSupportsPTY() {
 		_ = handle.Close()
-		c.state.Store(int32(cwtypes.StateCrashed))
+		c.setState(cwtypes.StateCrashed)
 		return cwtypes.ErrPTYUnsupportedByAgent
 	}
 
@@ -204,7 +246,7 @@ func (c *Controller) Stop(ctx context.Context) error {
 	if cur == cwtypes.StateStopped || cur == cwtypes.StateFailed {
 		return nil
 	}
-	c.state.Store(int32(cwtypes.StateStopping))
+	c.setState(cwtypes.StateStopping)
 	return c.send(ipc.MsgStopChild, ipc.StopChildPayload{TimeoutMs: c.opts.Spec.StopTimeout.Milliseconds()}, true)
 }
 
@@ -331,19 +373,19 @@ func (c *Controller) handleMessage(msg ipc.OutboxMessage) {
 			c.mu.Lock()
 			c.childPID = int(p.PID)
 			c.mu.Unlock()
-			c.state.Store(int32(cwtypes.StateRunning))
+			c.setState(cwtypes.StateRunning)
 		}
 	case ipc.MsgChildExited:
 		var p ipc.ChildExitedPayload
 		if err := ipc.DecodePayload(msg.Payload, &p); err == nil {
 			if cwtypes.State(c.state.Load()) == cwtypes.StateStopping || p.ExitCode == 0 {
-				c.state.Store(int32(cwtypes.StateStopped))
+				c.setState(cwtypes.StateStopped)
 			} else {
-				c.state.Store(int32(cwtypes.StateCrashed))
+				c.setState(cwtypes.StateCrashed)
 			}
 		}
 	case ipc.MsgChildError:
-		c.state.Store(int32(cwtypes.StateCrashed))
+		c.setState(cwtypes.StateCrashed)
 	case ipc.MsgLogChunk:
 		if c.opts.OnLogChunk == nil {
 			return
