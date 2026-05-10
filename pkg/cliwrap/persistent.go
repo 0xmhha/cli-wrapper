@@ -173,11 +173,13 @@ func (m *Manager) Reattach(ctx context.Context, id string) (ProcessHandle, error
 
 	// 6. Construct controller around the post-handshake conn.
 	ctrl, err := controller.NewControllerFromReattach(controller.ReattachOptions{
-		Spec:          meta.Spec,
-		Conn:          conn,
-		InitialBuffer: dump.Bytes,
-		RuntimeDir:    m.runtimeDir,
-		PersistentDir: m.persistentDir,
+		Spec:           meta.Spec,
+		Conn:           conn,
+		InitialBuffer:  dump.Bytes,
+		RuntimeDir:     m.runtimeDir,
+		PersistentDir:  m.persistentDir,
+		OutboxCapacity: m.outboxCapacity,
+		DisableWAL:     m.disableWAL,
 		OnLogChunk: func(stream uint8, data []byte) {
 			m.emitLogChunk(meta.ID, stream, data)
 		},

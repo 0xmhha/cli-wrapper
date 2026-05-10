@@ -31,6 +31,19 @@ type ControllerOptions struct {
 	// passes Manager.persistentDir.
 	PersistentDir string
 
+	// OutboxCapacity overrides the in-memory IPC outbox slot count. Zero
+	// uses the legacy default (1024). Larger values reduce the chance of
+	// overflow under bursty traffic at the cost of memory.
+	OutboxCapacity int
+
+	// DisableWAL skips the disk-backed write-ahead log on the outgoing
+	// IPC direction. When true, outbox overflow drops messages rather
+	// than fsync-spilling to disk; the caller accepts the rare-drop
+	// trade-off in exchange for predictable latency under bursty input.
+	// Default (false) preserves the legacy "messages are never lost"
+	// guarantee.
+	DisableWAL bool
+
 	// OnLogChunk is invoked for every inbound ipc.MsgLogChunk frame.
 	// The callback runs on the ipc.Conn dispatch goroutine, so it must
 	// not block for long. Callers that need to do heavy work should
@@ -119,11 +132,16 @@ func (c *Controller) Start(ctx context.Context) error {
 	}
 	c.handle = handle
 
+	cap := c.opts.OutboxCapacity
+	if cap <= 0 {
+		cap = 1024
+	}
 	conn, err := ipc.NewConn(ipc.ConnConfig{
 		RWC:        handle.Socket,
 		SpillerDir: filepath.Join(c.opts.RuntimeDir, "outbox-"+c.opts.Spec.ID),
-		Capacity:   1024,
+		Capacity:   cap,
 		WALBytes:   256 * 1024 * 1024,
+		DisableWAL: c.opts.DisableWAL,
 	})
 	if err != nil {
 		_ = handle.Close()

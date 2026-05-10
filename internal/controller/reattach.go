@@ -31,6 +31,11 @@ type ReattachOptions struct {
 	RuntimeDir    string
 	PersistentDir string
 	OnLogChunk    func(stream uint8, data []byte)
+
+	// OutboxCapacity / DisableWAL mirror ControllerOptions; passed through
+	// to the freshly-constructed ipc.Conn for the reattach connection.
+	OutboxCapacity int
+	DisableWAL     bool
 }
 
 // NewControllerFromReattach constructs a Controller around a connection
@@ -49,10 +54,12 @@ func NewControllerFromReattach(opts ReattachOptions) (*Controller, error) {
 
 	c := &Controller{
 		opts: ControllerOptions{
-			Spec:          opts.Spec,
-			RuntimeDir:    opts.RuntimeDir,
-			PersistentDir: opts.PersistentDir,
-			OnLogChunk:    opts.OnLogChunk,
+			Spec:           opts.Spec,
+			RuntimeDir:     opts.RuntimeDir,
+			PersistentDir:  opts.PersistentDir,
+			OnLogChunk:     opts.OnLogChunk,
+			OutboxCapacity: opts.OutboxCapacity,
+			DisableWAL:     opts.DisableWAL,
 		},
 	}
 
@@ -65,11 +72,16 @@ func NewControllerFromReattach(opts ReattachOptions) (*Controller, error) {
 	c.capReplyCh = make(chan []string, 1)
 	close(c.capReplyCh)
 
+	cap := opts.OutboxCapacity
+	if cap <= 0 {
+		cap = 1024
+	}
 	conn, err := ipc.NewConn(ipc.ConnConfig{
 		RWC:        opts.Conn,
 		SpillerDir: filepath.Join(opts.RuntimeDir, "outbox-reattach-"+opts.Spec.ID),
-		Capacity:   1024,
+		Capacity:   cap,
 		WALBytes:   256 * 1024 * 1024,
+		DisableWAL: opts.DisableWAL,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("controller reattach conn: %w", err)

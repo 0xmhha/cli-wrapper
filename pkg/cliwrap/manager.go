@@ -23,6 +23,8 @@ type Manager struct {
 	logFileDir         string // "" = disabled
 	logFileMaxSize     int64  // 0 = FileRotator default
 	logFileMaxFiles    int    // 0 = FileRotator default
+	outboxCapacity     int    // 0 = controller default (1024)
+	disableWAL         bool   // false = WAL on (legacy default)
 	spawner            *supervise.Spawner
 
 	mu      sync.Mutex
@@ -143,10 +145,12 @@ func (m *Manager) Shutdown(ctx context.Context) error {
 func (m *Manager) newController(spec Spec) (*controller.Controller, error) {
 	id := spec.ID
 	return controller.NewController(controller.ControllerOptions{
-		Spec:          spec,
-		Spawner:       m.spawner,
-		RuntimeDir:    m.runtimeDir,
-		PersistentDir: m.persistentDir,
+		Spec:           spec,
+		Spawner:        m.spawner,
+		RuntimeDir:     m.runtimeDir,
+		PersistentDir:  m.persistentDir,
+		OutboxCapacity: m.outboxCapacity,
+		DisableWAL:     m.disableWAL,
 		OnLogChunk: func(stream uint8, data []byte) {
 			m.emitLogChunk(id, stream, data)
 		},

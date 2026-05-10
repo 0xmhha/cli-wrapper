@@ -79,3 +79,21 @@ func TestSpiller_AckRetiresWALEntries(t *testing.T) {
 	require.Contains(t, seqs, uint64(6))
 	require.NotContains(t, seqs, uint64(5), "seq 5 must have been retired")
 }
+
+func TestInMemorySpiller_OverflowDrops(t *testing.T) {
+	sp := NewInMemorySpiller(2)
+	defer sp.Close()
+
+	// Capacity is 2: first two enqueues succeed.
+	require.True(t, sp.Outbox().Enqueue(OutboxMessage{Header: Header{MsgType: MsgPing, SeqNo: 1}}))
+	require.True(t, sp.Outbox().Enqueue(OutboxMessage{Header: Header{MsgType: MsgPing, SeqNo: 2}}))
+
+	// Third enqueue must drop because there is no spill function. Without
+	// the disk-backed WAL, overflow returns false rather than fsync-ing.
+	require.False(t, sp.Outbox().Enqueue(OutboxMessage{Header: Header{MsgType: MsgPing, SeqNo: 3}}),
+		"in-memory spiller should drop on overflow, not block or persist")
+
+	// Ack and ReplayInto must be no-ops, never panicking on the nil WAL.
+	require.NoError(t, sp.Ack(2))
+	require.NoError(t, sp.ReplayInto(sp.Outbox()))
+}

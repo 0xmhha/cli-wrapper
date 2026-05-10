@@ -22,14 +22,26 @@ type ConnConfig struct {
 	// RWC is the underlying bidirectional stream (net.Conn, net.Pipe, etc.).
 	RWC io.ReadWriteCloser
 
-	// SpillerDir holds the WAL for the outgoing direction.
+	// SpillerDir holds the WAL for the outgoing direction. Ignored when
+	// DisableWAL is true.
 	SpillerDir string
 
 	// Capacity is the in-memory outbox capacity.
 	Capacity int
 
-	// WALBytes is the WAL size cap.
+	// WALBytes is the WAL size cap. Ignored when DisableWAL is true.
 	WALBytes int64
+
+	// DisableWAL skips disk-backed write-ahead logging entirely. When true,
+	// outbox overflow drops messages instead of spilling to disk; the
+	// SpillerDir/WALBytes fields are ignored. Use for interactive PTY
+	// callers that prefer drops over the per-keystroke fsync cost incurred
+	// when the in-memory outbox fills under load — drops in that case are
+	// tolerable (the user simply retypes), and avoiding fsync removes the
+	// observed cumulative-latency mode that scales with disk throughput.
+	// Default (false) preserves the legacy "messages are never lost"
+	// guarantee.
+	DisableWAL bool
 
 	// MaxRecvPayload caps inbound frame size. If zero, MaxPayloadSize is used.
 	MaxRecvPayload uint32
@@ -83,9 +95,15 @@ func NewConn(cfg ConnConfig) (*Conn, error) {
 	if cfg.MaxRecvPayload == 0 {
 		cfg.MaxRecvPayload = MaxPayloadSize
 	}
-	sp, err := NewSpiller(cfg.SpillerDir, cfg.Capacity, cfg.WALBytes)
-	if err != nil {
-		return nil, fmt.Errorf("ipc: spiller: %w", err)
+	var sp *Spiller
+	if cfg.DisableWAL {
+		sp = NewInMemorySpiller(cfg.Capacity)
+	} else {
+		var err error
+		sp, err = NewSpiller(cfg.SpillerDir, cfg.Capacity, cfg.WALBytes)
+		if err != nil {
+			return nil, fmt.Errorf("ipc: spiller: %w", err)
+		}
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	c := &Conn{

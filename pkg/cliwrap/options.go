@@ -62,3 +62,25 @@ func WithLogFileRotation(maxSize int64, maxFiles int) ManagerOption {
 func WithPersistentDir(path string) ManagerOption {
 	return func(m *Manager) { m.persistentDir = path }
 }
+
+// WithOutboxCapacity overrides the IPC outbox slot count for every
+// session created by this Manager. Zero or negative values fall back to
+// the legacy default (1024). Larger buffers reduce overflow likelihood
+// under bursty traffic at the cost of memory; for interactive PTY hosts
+// values of 4096–16384 are typical.
+func WithOutboxCapacity(n int) ManagerOption {
+	return func(m *Manager) { m.outboxCapacity = n }
+}
+
+// WithoutWAL disables the disk-backed write-ahead log on the outgoing
+// IPC direction for every session created by this Manager. When set,
+// outbox overflow drops messages instead of fsync-spilling to disk —
+// the host trades the legacy "messages are never lost" guarantee for
+// predictable per-keystroke latency under load.
+//
+// Recommended for interactive PTY hosts where dropped input is recovered
+// by user retry. Not recommended for batch / persistent / replay-critical
+// workloads.
+func WithoutWAL() ManagerOption {
+	return func(m *Manager) { m.disableWAL = true }
+}
