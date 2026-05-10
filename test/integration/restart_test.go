@@ -4,7 +4,6 @@ package integration
 
 import (
 	"context"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -21,8 +20,7 @@ func TestIntegration_ManualRestartOnFailure(t *testing.T) {
 	defer goleak.VerifyNone(t)
 
 	agentBin := supervise.BuildAgentForTest(t)
-	root := findRoot(t)
-	crasher := filepath.Join(root, "test/fixtures/bin/fixture-crasher")
+	crasher := BuildFixtureForTest(t, "crasher")
 
 	mgr, err := cliwrap.NewManager(
 		cliwrap.WithAgentPath(agentBin),

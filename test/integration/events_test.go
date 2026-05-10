@@ -4,7 +4,6 @@ package integration
 
 import (
 	"context"
-	"path/filepath"
 	"sync"
 	"testing"
 	"time"
@@ -32,8 +31,7 @@ func TestIntegration_EventsStreamDeliversLifecycle(t *testing.T) {
 	defer goleak.VerifyNone(t)
 
 	agentBin := supervise.BuildAgentForTest(t)
-	root := findRoot(t)
-	noisy := filepath.Join(root, "test/fixtures/bin/fixture-noisy")
+	noisy := BuildFixtureForTest(t, "noisy")
 
 	mgr, err := cliwrap.NewManager(
 		cliwrap.WithAgentPath(agentBin),

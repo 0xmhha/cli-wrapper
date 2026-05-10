@@ -6,7 +6,6 @@ package integration
 import (
 	"bytes"
 	"context"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -24,8 +23,7 @@ func TestIntegration_LogsSnapshotCapturesChildOutput(t *testing.T) {
 	defer goleak.VerifyNone(t)
 
 	agentBin := supervise.BuildAgentForTest(t)
-	root := findRoot(t)
-	noisy := filepath.Join(root, "test/fixtures/bin/fixture-noisy")
+	noisy := BuildFixtureForTest(t, "noisy")
 
 	mgr, err := cliwrap.NewManager(
 		cliwrap.WithAgentPath(agentBin),
