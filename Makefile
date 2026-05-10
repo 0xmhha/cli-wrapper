@@ -1,5 +1,23 @@
 GO := go
 PKG := ./...
+BIN_DIR := bin
+
+.PHONY: build
+build: build-agent build-cliwrap
+
+.PHONY: build-agent
+build-agent:
+	@mkdir -p $(BIN_DIR)
+	$(GO) build -o $(BIN_DIR)/cliwrap-agent ./cmd/cliwrap-agent
+
+.PHONY: build-cliwrap
+build-cliwrap:
+	@mkdir -p $(BIN_DIR)
+	$(GO) build -o $(BIN_DIR)/cliwrap ./cmd/cliwrap
+
+.PHONY: clean
+clean:
+	rm -rf $(BIN_DIR)
 
 .PHONY: test
 test:
