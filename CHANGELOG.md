@@ -2,6 +2,21 @@
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-05-11
+
+### Fixed
+- `Spiller.spill` is now nil-WAL safe. When a host runs in no-WAL mode
+  (`NewInMemorySpiller` / `WithoutWAL()`) and `Conn.writeLoop` calls
+  `sp.spill` directly after a `WriteFrame` failure — the documented
+  contract said this never happens, but the writeLoop bypasses the
+  Outbox's nil-spill short-circuit — the previous code dereferenced a
+  nil `*WAL` and crashed the process. Triggered in practice when an
+  ai-m host running cliwrap+`WithoutWAL` had its agent SIGKILL'd while
+  Attach was holding an in-flight frame. The spill path now drops the
+  frame in no-WAL mode (matching the documented "drop on overflow"
+  semantics). Regression guarded by
+  `TestInMemorySpiller_SpillDirectCallNoPanic`.
+
 ## [0.4.0] - 2026-05-10
 
 ### Added

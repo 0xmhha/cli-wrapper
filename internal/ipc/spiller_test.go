@@ -97,3 +97,24 @@ func TestInMemorySpiller_OverflowDrops(t *testing.T) {
 	require.NoError(t, sp.Ack(2))
 	require.NoError(t, sp.ReplayInto(sp.Outbox()))
 }
+
+// TestInMemorySpiller_SpillDirectCallNoPanic guards the Spiller.spill method
+// against nil-WAL deref when called directly by Conn.writeLoop on a
+// WriteFrame failure. The Outbox itself short-circuits spill in no-WAL
+// mode (NewOutbox is given a nil SpillFunc), but writeLoop holds a direct
+// reference to sp.spill and calls it as a last-ditch attempt to retain an
+// in-flight frame after the socket dies. Before this guard, that direct
+// call dereferenced a nil *WAL and crashed the process — observed when
+// the host opted into WithoutWAL and the agent was SIGKILL'd mid-attach.
+func TestInMemorySpiller_SpillDirectCallNoPanic(t *testing.T) {
+	sp := NewInMemorySpiller(2)
+	defer sp.Close()
+
+	msg := OutboxMessage{Header: Header{MsgType: MsgPing, SeqNo: 99}}
+
+	// Calling sp.spill directly mirrors what Conn.writeLoop does on a
+	// WriteFrame failure. Must not panic; documented contract is to drop.
+	require.NotPanics(t, func() {
+		require.NoError(t, sp.spill(msg))
+	})
+}

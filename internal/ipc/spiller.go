@@ -91,9 +91,20 @@ func (s *Spiller) Close() error {
 
 // spill is the SpillFunc passed to the Outbox; it serializes through the
 // same mutex that protects Ack/ReplayInto so that WAL state is consistent.
-// Never invoked in no-WAL mode (the Outbox is constructed with nil spill).
+//
+// The Outbox itself does NOT invoke spill in no-WAL mode (NewInMemorySpiller
+// constructs the Outbox with a nil SpillFunc, which the Outbox short-circuits
+// on overflow). However, Conn.writeLoop calls Spiller.spill DIRECTLY on
+// WriteFrame failure as a last-ditch attempt to preserve the in-flight
+// message — and there is no nil-WAL check on that path. Guard here so
+// no-WAL Conn instances can survive socket-close races (e.g., agent
+// process killed while the writeLoop holds an in-flight frame) without
+// a nil-pointer panic. Dropping is the documented no-WAL contract.
 func (s *Spiller) spill(msg OutboxMessage) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if s.wal == nil {
+		return nil
+	}
 	return s.wal.Append(msg)
 }
