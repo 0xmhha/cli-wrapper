@@ -72,6 +72,35 @@ func TestConn_OnDisconnect_FiresOnSocketEOF(t *testing.T) {
 	_ = conn.Close(ctx)
 }
 
+// TestConn_OnDisconnect_TerminatesWriteLoop guards against a regression where
+// fireDisconnect ran the user callback but left cancelCtx open, causing
+// writeLoop to poll Outbox.Dequeue forever against a dead socket.
+//
+// The host-side cleanup contract: once a remote EOF triggers fireDisconnect,
+// the conn's reader AND writer goroutines must both terminate without
+// requiring a separate Conn.Close call (because the canonical observer of
+// disconnect — controller — never calls Close itself in that path).
+// Done() is the public signal that both have exited.
+func TestConn_OnDisconnect_TerminatesWriteLoop(t *testing.T) {
+	a, b := disconnectPair()
+	defer func() { _ = b.Close() }()
+
+	conn := newDisconnectConn(t, a)
+	conn.SetOnDisconnect(func(error) {}) // present but no-op
+	conn.Start()
+
+	require.NoError(t, b.Close())
+
+	select {
+	case <-conn.Done():
+		// readLoop AND writeLoop have exited (cancelCtx cancelled by
+		// fireDisconnect). Done() closure proves writeLoop is no longer
+		// blocked on Outbox.Dequeue.
+	case <-time.After(2 * time.Second):
+		t.Fatal("conn.Done() did not fire within 2s of remote EOF; writeLoop likely leaking")
+	}
+}
+
 func TestConn_OnDisconnect_DoesNotFireOnNormalClose(t *testing.T) {
 	a, b := disconnectPair()
 	defer func() { _ = b.Close() }()

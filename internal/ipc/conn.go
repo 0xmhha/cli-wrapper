@@ -137,6 +137,14 @@ func (c *Conn) SetOnDisconnect(cb func(error)) {
 
 // fireDisconnect calls the registered onDisconnect callback at most once.
 // It is suppressed when c.closed is already true (locally initiated shutdown).
+//
+// After invoking the user callback, cancelFunc is called so writeLoop —
+// blocked on Outbox.Dequeue with a 100 ms timeout — exits within one tick
+// instead of polling forever against a dead socket. Without this, hosts
+// that observe disconnect only via SetOnDisconnect (and never call
+// Conn.Close themselves) leaked one writeLoop goroutine per dead agent,
+// surfacing as goleak failures in test binaries that mix integration
+// tests with goleak-guarded unit tests.
 func (c *Conn) fireDisconnect(cause error) {
 	if c.closed.Load() {
 		return // locally initiated shutdown — do not fire
@@ -148,6 +156,7 @@ func (c *Conn) fireDisconnect(cause error) {
 		if cb != nil {
 			cb(cause)
 		}
+		c.cancelFunc()
 	})
 }
 

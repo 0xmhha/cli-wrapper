@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-05-11
+
+### Fixed
+- `Conn.fireDisconnect` now cancels the conn's cancelCtx after invoking
+  the user callback. Without this, writeLoop polled `Outbox.Dequeue` at
+  100 ms intervals forever against a dead socket whenever the host
+  observed disconnect only via `SetOnDisconnect` (the typical
+  controller-mediated path) and never called `Conn.Close` itself. The
+  writeLoop leak surfaced as goleak failures in test binaries that
+  mixed integration tests with goleak-guarded unit tests. With this
+  fix the writer exits within one Dequeue tick of disconnect. Regression
+  guarded by `TestConn_OnDisconnect_TerminatesWriteLoop`.
+
 ## [0.4.1] - 2026-05-11
 
 ### Fixed
