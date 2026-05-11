@@ -2,6 +2,47 @@
 
 ## [Unreleased]
 
+## [0.4.4] - 2026-05-11
+
+### Added
+- `FeatureFrameAck` (`"frame_ack"`) capability. Agents now advertise
+  this token in `MsgTypeCapabilityReply`. The runtime contract is:
+  for any inbound frame whose header carries `FlagAckRequired`, the
+  agent emits `MsgAckData` with the inbound `SeqNo` as `AckedSeq`
+  AFTER the message has been processed synchronously (e.g.,
+  `dispatcher.stopChild` cancels the runner and joins its goroutine
+  before the ack fires).
+- `Conn.SendAndAwaitAck(ctx, msgType, flags, payload)` host-side
+  helper. Enqueues a frame with `FlagAckRequired` set and blocks
+  until the matching ack arrives, until ctx is cancelled, or until
+  the conn closes. Pending acks are tracked in a per-Conn map and
+  cleaned up on every termination path.
+- `Controller.AgentSupportsFrameAck()` accessor. The Stop path is
+  the only consumer in this release; future ack-required messages
+  can gate on the same predicate.
+
+### Changed
+- `Controller.Stop` is now synchronous against agents that advertise
+  `frame_ack`. Previous releases were fire-and-forget despite
+  passing `ack=true` to `Conn.send`; the flag set
+  `FlagAckRequired` in the frame header but `SendWithNewSeq` did
+  not block. Diagnosed and pinned by ai-m's TestCrash investigation
+  (HANDOFF.md Quick wins #1, 2026-05-11). Hosts that pair Stop
+  with `handle.Close` no longer pay the 2.5 s `dispatcher.Drain`
+  timeout, because Stop now waits for the runner to drain BEFORE
+  returning.
+- `Conn.readLoop` intercepts `MsgAckData` / `MsgAckControl` frames
+  ahead of the user-supplied message handler so wire-level acks do
+  not surface in the controller's `handleMessage` switch.
+
+### Compatibility
+- Pre-0.4.4 agents (no `frame_ack` token) make
+  `Controller.AgentSupportsFrameAck` return false; `Stop` falls back
+  to the historical fire-and-forget path. New host + old agent: no
+  hangs, no behaviour change. Old host + new agent: agent emits the
+  ack unconditionally on `FlagAckRequired` frames, but the old host
+  ignores them — also no behaviour change. Mix safe both ways.
+
 ## [0.4.3] - 2026-05-11
 
 ### Added

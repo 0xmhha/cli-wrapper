@@ -240,13 +240,31 @@ func (c *Controller) Start(ctx context.Context) error {
 	return nil
 }
 
-// Stop sends STOP_CHILD.
+// Stop sends MsgStopChild.
+//
+// When the connected agent advertises the `frame_ack` capability, Stop
+// blocks (until ctx) on the agent's MsgAckData reply, which the agent
+// emits AFTER `dispatcher.stopChild` has cancelled the runner and
+// awaited its wg. The caller is therefore guaranteed that by the time
+// Stop returns nil, the child is dead and the runner has fully cleaned
+// up. Older agents that lack the capability fall back to fire-and-
+// forget (current historical behaviour) — Stop returns immediately
+// once the frame is enqueued.
 func (c *Controller) Stop(ctx context.Context) error {
 	cur := cwtypes.State(c.state.Load())
 	if cur == cwtypes.StateStopped || cur == cwtypes.StateFailed {
 		return nil
 	}
 	c.setState(cwtypes.StateStopping)
+	payload, err := ipc.EncodePayload(ipc.StopChildPayload{TimeoutMs: c.opts.Spec.StopTimeout.Milliseconds()})
+	if err != nil {
+		return err
+	}
+	if c.AgentSupportsFrameAck() {
+		return c.conn.SendAndAwaitAck(ctx, ipc.MsgStopChild, 0, payload)
+	}
+	// Pre-frame_ack agents: fire-and-forget. The caller may follow up
+	// with handle.Close, which carries the SIGTERM + Drain path.
 	return c.send(ipc.MsgStopChild, ipc.StopChildPayload{TimeoutMs: c.opts.Spec.StopTimeout.Milliseconds()}, true)
 }
 
@@ -320,6 +338,16 @@ func (c *Controller) AgentSupportsPTY() bool {
 // processHandle.Start to refuse Persistent=true against pre-CW-G4 agents.
 func (c *Controller) AgentSupportsPersistence() bool {
 	return c.agentHasFeature("persistence")
+}
+
+// AgentSupportsFrameAck reports whether the connected agent advertised
+// the "frame_ack" feature: it emits MsgAckData in response to any
+// inbound frame whose header has FlagAckRequired set. When set,
+// Controller.Stop uses Conn.SendAndAwaitAck to turn MsgStopChild into
+// a synchronous request/response. When unset, Stop falls back to the
+// historical fire-and-forget path. v0.4.4+.
+func (c *Controller) AgentSupportsFrameAck() bool {
+	return c.agentHasFeature("frame_ack")
 }
 
 // agentHasFeature is the shared lookup for capability feature checks.

@@ -124,10 +124,23 @@ func (d *Dispatcher) AdoptConn(newConn *ipc.Conn) {
 }
 
 // Handle processes an inbound message from the host.
+//
+// If the inbound frame has FlagAckRequired set, an MsgAckData carrying the
+// inbound SeqNo is emitted AFTER the switch-handler completes — the ack
+// promises "synchronous processing done", so it must follow rather than
+// precede the work. Hosts that opted into this flag via SendAndAwaitAck
+// can then turn fire-and-forget control messages (e.g., MsgStopChild)
+// into synchronous request/response without bespoke per-message replies.
 func (d *Dispatcher) Handle(msg ipc.OutboxMessage) {
 	if os.Getenv("CLIWRAP_DEBUG") == "1" {
 		fmt.Fprintf(os.Stderr, "AGENT: Handle msgType=%d\n", msg.Header.MsgType)
 	}
+	ackRequired := msg.Header.Flags&ipc.FlagAckRequired != 0
+	defer func() {
+		if ackRequired {
+			_ = d.SendControl(ipc.MsgAckData, ipc.AckPayload{AckedSeq: msg.Header.SeqNo}, false)
+		}
+	}()
 	switch msg.Header.MsgType {
 	case ipc.MsgHello:
 		_ = d.SendControl(ipc.MsgHelloAck, ipc.HelloAckPayload{ProtocolVersion: ipc.ProtocolVersion}, false)

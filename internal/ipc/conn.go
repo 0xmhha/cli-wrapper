@@ -78,6 +78,12 @@ type Conn struct {
 	// receiver's watermark dedup would then drop the lower-seq frame as a
 	// "duplicate", silently losing it. See CW-G5.
 	sendMu sync.Mutex
+
+	// pendingAcks tracks frames sent via SendAndAwaitAck that are waiting
+	// for the remote to emit MsgAckData / MsgAckControl with the matching
+	// AckedSeq. Read path intercepts those types and resolves the channel.
+	pendingMu   sync.Mutex
+	pendingAcks map[uint64]chan struct{}
 }
 
 // NewConn constructs a Conn. Call Start() to launch the reader/writer
@@ -202,6 +208,82 @@ func (c *Conn) SendWithNewSeq(msgType MsgType, flags Flags, payload []byte) bool
 	return c.sp.Outbox().Enqueue(OutboxMessage{Header: h, Payload: payload})
 }
 
+// SendAndAwaitAck enqueues a frame with FlagAckRequired set and blocks
+// until the remote emits MsgAckData (or MsgAckControl in the
+// agent→host direction) carrying the original frame's SeqNo as
+// AckedSeq, or until ctx is cancelled, or until the conn is closed.
+//
+// Use this only when the remote advertises the `frame_ack` capability.
+// Hosts MUST fall back to SendWithNewSeq for older agents — see
+// Controller.Stop for the gating pattern. There is no built-in
+// timeout: ctx is the sole bound.
+//
+// Returns nil on ack received. Returns ctx.Err() on cancellation,
+// errors.New("ipc: conn closed") on conn shutdown, or
+// errors.New("ipc: outbox enqueue failed") if the outbox refused the
+// frame.
+func (c *Conn) SendAndAwaitAck(ctx context.Context, msgType MsgType, flags Flags, payload []byte) error {
+	c.sendMu.Lock()
+	if c.closed.Load() {
+		c.sendMu.Unlock()
+		return errors.New("ipc: conn closed")
+	}
+	seq := c.seqs.Next()
+	ch := make(chan struct{})
+	c.pendingMu.Lock()
+	if c.pendingAcks == nil {
+		c.pendingAcks = make(map[uint64]chan struct{})
+	}
+	c.pendingAcks[seq] = ch
+	c.pendingMu.Unlock()
+	h := Header{
+		MsgType: msgType,
+		Flags:   flags | FlagAckRequired,
+		SeqNo:   seq,
+		Length:  uint32(len(payload)),
+	}
+	enqueued := c.sp.Outbox().Enqueue(OutboxMessage{Header: h, Payload: payload})
+	c.sendMu.Unlock()
+
+	cleanup := func() {
+		c.pendingMu.Lock()
+		delete(c.pendingAcks, seq)
+		c.pendingMu.Unlock()
+	}
+
+	if !enqueued {
+		cleanup()
+		return errors.New("ipc: outbox enqueue failed")
+	}
+
+	select {
+	case <-ch:
+		// deliverAck already removed the entry.
+		return nil
+	case <-ctx.Done():
+		cleanup()
+		return ctx.Err()
+	case <-c.cancelCtx.Done():
+		cleanup()
+		return errors.New("ipc: conn closed")
+	}
+}
+
+// deliverAck routes an inbound ack frame to the pending SendAndAwaitAck
+// waiter, if any. Unknown SeqNos are dropped — the sender may have
+// already given up via ctx cancellation.
+func (c *Conn) deliverAck(seq uint64) {
+	c.pendingMu.Lock()
+	ch, ok := c.pendingAcks[seq]
+	if ok {
+		delete(c.pendingAcks, seq)
+	}
+	c.pendingMu.Unlock()
+	if ok {
+		close(ch)
+	}
+}
+
 // Send enqueues msg for delivery. Returns false if the conn is closed.
 func (c *Conn) Send(msg OutboxMessage) bool {
 	if c.closed.Load() {
@@ -293,6 +375,17 @@ func (c *Conn) readLoop() {
 		// of the FlagIsReplay bit. Dedup every inbound frame so higher
 		// layers see each seq at most once.
 		if c.dedup.Seen(h.SeqNo) {
+			continue
+		}
+		// Intercept wire-level ack frames before invoking the user
+		// handler. SendAndAwaitAck callers are waiting on these; the
+		// controller / dispatcher higher-level handlers have no reason
+		// to see them.
+		if h.MsgType == MsgAckData || h.MsgType == MsgAckControl {
+			var p AckPayload
+			if err := DecodePayload(body, &p); err == nil {
+				c.deliverAck(p.AckedSeq)
+			}
 			continue
 		}
 		if hp := c.handler.Load(); hp != nil && *hp != nil {
