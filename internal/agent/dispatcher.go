@@ -134,7 +134,7 @@ func (d *Dispatcher) Handle(msg ipc.OutboxMessage) {
 	case ipc.MsgStartChild:
 		var p ipc.StartChildPayload
 		if err := ipc.DecodePayload(msg.Payload, &p); err != nil {
-			_ = d.SendControl(ipc.MsgChildError, ipc.ChildErrorPayload{Phase: "decode", Message: err.Error()}, false)
+			_ = d.SendControl(ipc.MsgChildError, ipc.ChildErrorPayload{Phase: "decode", Message: err.Error(), Transient: true}, false)
 			return
 		}
 		d.startChild(p)
@@ -149,29 +149,29 @@ func (d *Dispatcher) Handle(msg ipc.OutboxMessage) {
 	case ipc.MsgTypePTYWrite:
 		w, err := ipc.DecodePTYWrite(msg.Payload)
 		if err != nil {
-			_ = d.SendControl(ipc.MsgChildError, ipc.ChildErrorPayload{Phase: "pty_write", Message: err.Error()}, false)
+			_ = d.SendControl(ipc.MsgChildError, ipc.ChildErrorPayload{Phase: "pty_write", Message: err.Error(), Transient: true}, false)
 			return
 		}
 		if err := d.runner.WriteToActivePTY(w.Bytes); err != nil {
-			_ = d.SendControl(ipc.MsgChildError, ipc.ChildErrorPayload{Phase: "pty_write", Message: err.Error()}, false)
+			_ = d.SendControl(ipc.MsgChildError, ipc.ChildErrorPayload{Phase: "pty_write", Message: err.Error(), Transient: true}, false)
 		}
 	case ipc.MsgTypePTYResize:
 		rz, err := ipc.DecodePTYResize(msg.Payload)
 		if err != nil {
-			_ = d.SendControl(ipc.MsgChildError, ipc.ChildErrorPayload{Phase: "pty_resize", Message: err.Error()}, false)
+			_ = d.SendControl(ipc.MsgChildError, ipc.ChildErrorPayload{Phase: "pty_resize", Message: err.Error(), Transient: true}, false)
 			return
 		}
 		if err := d.runner.ResizeActivePTY(rz.Cols, rz.Rows); err != nil {
-			_ = d.SendControl(ipc.MsgChildError, ipc.ChildErrorPayload{Phase: "pty_resize", Message: err.Error()}, false)
+			_ = d.SendControl(ipc.MsgChildError, ipc.ChildErrorPayload{Phase: "pty_resize", Message: err.Error(), Transient: true}, false)
 		}
 	case ipc.MsgTypePTYSignal:
 		sg, err := ipc.DecodePTYSignal(msg.Payload)
 		if err != nil {
-			_ = d.SendControl(ipc.MsgChildError, ipc.ChildErrorPayload{Phase: "pty_signal", Message: err.Error()}, false)
+			_ = d.SendControl(ipc.MsgChildError, ipc.ChildErrorPayload{Phase: "pty_signal", Message: err.Error(), Transient: true}, false)
 			return
 		}
 		if err := d.runner.SignalActivePTY(syscall.Signal(sg.Signum)); err != nil {
-			_ = d.SendControl(ipc.MsgChildError, ipc.ChildErrorPayload{Phase: "pty_signal", Message: err.Error()}, false)
+			_ = d.SendControl(ipc.MsgChildError, ipc.ChildErrorPayload{Phase: "pty_signal", Message: err.Error(), Transient: true}, false)
 		}
 	case ipc.MsgTypeCapabilityQuery:
 		// CLIWRAP_AGENT_NO_CAPABILITY=1 skips the reply, simulating an older
@@ -189,7 +189,7 @@ func (d *Dispatcher) startChild(p ipc.StartChildPayload) {
 	d.mu.Lock()
 	if d.cancelFn != nil {
 		d.mu.Unlock()
-		_ = d.SendControl(ipc.MsgChildError, ipc.ChildErrorPayload{Phase: "start", Message: "child already running"}, false)
+		_ = d.SendControl(ipc.MsgChildError, ipc.ChildErrorPayload{Phase: "start", Message: "child already running", Transient: true}, false)
 		return
 	}
 	ctx, cancel := context.WithCancel(context.Background())

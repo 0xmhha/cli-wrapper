@@ -97,9 +97,24 @@ type LogFileRefPayload struct {
 }
 
 // ChildErrorPayload reports an exec/runtime error from inside the agent.
+//
+// Transient distinguishes "operational RPC failure while the child remains
+// alive" (e.g., pty_write on a closed fd, malformed StartChild decode) from
+// "the child is dead or never started" (exec failure). The controller uses
+// the flag to gate StateCrashed: only non-transient errors actually flip
+// state, so a host that observed StateRunning won't see a phantom
+// StateRunning → StateCrashed → StateRunning sawtooth caused by a single
+// resize-on-closed-fd error.
+//
+// Zero value (false) intentionally means "fatal" so that pre-0.4.3 agents
+// — which omit this field — keep the historical behavior of flipping the
+// controller to StateCrashed on every MsgChildError, preserving wire
+// compatibility for hosts upgraded to a new cli-wrapper version while
+// still running an older agent binary.
 type ChildErrorPayload struct {
-	Phase   string `msgpack:"phase"`
-	Message string `msgpack:"msg"`
+	Phase     string `msgpack:"phase"`
+	Message   string `msgpack:"msg"`
+	Transient bool   `msgpack:"transient,omitempty"`
 }
 
 // ResourceSamplePayload carries a periodic resource sample.

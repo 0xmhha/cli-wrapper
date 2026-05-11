@@ -385,7 +385,19 @@ func (c *Controller) handleMessage(msg ipc.OutboxMessage) {
 			}
 		}
 	case ipc.MsgChildError:
-		c.setState(cwtypes.StateCrashed)
+		// Gate the StateCrashed transition behind the Transient flag.
+		// Transient errors (decode/pty_write/pty_resize/pty_signal/start —
+		// the child is still alive, the agent just couldn't service one
+		// RPC) leave state unchanged so hosts on OnStateChange don't see
+		// a spurious Running → Crashed → Running sawtooth. Pre-0.4.3
+		// agents omit the field; its zero value (false) preserves the
+		// historical "every ChildError → Crashed" behaviour for that
+		// upgrade path.
+		var p ipc.ChildErrorPayload
+		_ = ipc.DecodePayload(msg.Payload, &p)
+		if !p.Transient {
+			c.setState(cwtypes.StateCrashed)
+		}
 	case ipc.MsgLogChunk:
 		if c.opts.OnLogChunk == nil {
 			return

@@ -2,6 +2,32 @@
 
 ## [Unreleased]
 
+## [0.4.3] - 2026-05-11
+
+### Added
+- `ChildErrorPayload.Transient bool` field. Distinguishes operational
+  RPC failures while the child remains alive (decode error,
+  pty_write/pty_resize/pty_signal failure on a closed fd,
+  start-while-already-running) from "the child is dead or never
+  started" (exec failure). Backward-compatible: zero value of the
+  field means "fatal", preserving the historical behavior for
+  pre-0.4.3 agents that omit the field entirely.
+- Controller now gates the `StateCrashed` transition behind
+  `!Transient`, so hosts listening via `OnStateChange` no longer see
+  a spurious `StateRunning → StateCrashed → StateRunning` sawtooth on
+  every transient RPC failure. This lets hosts drop the
+  `sawRunning`-style observer-side gates they had been carrying to
+  paper over the issue. Regression guarded by
+  `TestController_TransientChildErrorDoesNotCrash` and
+  `TestController_FatalChildErrorTransitionsToCrashed` (which also
+  exercises the omitted-field backward-compat path).
+
+### Changed
+- Agent dispatcher sets `Transient: true` on every existing
+  `MsgChildError` send except the `exec` failure path, which remains
+  the sole fatal signal. The wire payload now travels with the
+  `transient` msgpack tag set or absent accordingly.
+
 ## [0.4.2] - 2026-05-11
 
 ### Fixed
