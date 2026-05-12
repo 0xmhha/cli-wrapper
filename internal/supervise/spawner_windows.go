@@ -61,6 +61,11 @@ type Spawner struct {
 // still wire the Spawner into their Manager.
 func NewSpawner(opts SpawnerOptions) *Spawner { return &Spawner{opts: opts} }
 
+// Options mirrors the Unix accessor so cross-package tests that
+// verify env-var propagation (e.g. CLIWRAP_AGENT_OUTBOX_CAPACITY)
+// compile on Windows. The Spawn path itself remains unsupported.
+func (s *Spawner) Options() SpawnerOptions { return s.opts }
+
 // Spawn returns ErrUnsupportedOnWindows. Implementing the Windows port
 // requires a Named Pipe IPC layer (replacing syscall.Socketpair) plus
 // Job Object integration for the cascade-on-host-exit semantics that
