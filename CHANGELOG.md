@@ -2,6 +2,34 @@
 
 ## [Unreleased]
 
+## [0.4.6] - 2026-05-12
+
+### Added
+- `WithAgentOutboxCapacity(n int) ManagerOption` tunes the IPC outbox
+  slot count INSIDE the agent process, complementing
+  `WithOutboxCapacity` (v0.4.0) which only tuned the host's outbox.
+  The agent's outbox holds PTY output frames pending delivery to a
+  slow host consumer; raising it from the legacy 1024 default reduces
+  drop probability during brief host stalls. Values of 4096–16384
+  match host-side guidance.
+- Propagation: `NewManager` sets `CLIWRAP_AGENT_OUTBOX_CAPACITY=<n>`
+  on the spawner's ExtraEnv when the option is configured. The
+  agent's `DefaultConfig` reads the env var and overrides its 1024
+  default when the value parses as a positive integer. Invalid values
+  fall back silently — backward-compatible for hosts that do not opt
+  in.
+- `supervise.Spawner.Options()` accessor surfaces the configured
+  `SpawnerOptions` so cross-package tests can verify env-var
+  propagation without spawning real children.
+
+### Tests
+- `TestDefaultConfig_OutboxCapacityEnvOverride` (6 cases): env-var
+  parsing semantics — unset, valid positive, empty, zero, negative,
+  non-numeric.
+- `TestWithAgentOutboxCapacity_PropagatesViaSpawnerEnv` (5 cases):
+  Manager option threads into `Spawner.Options().ExtraEnv` at
+  `NewManager` time.
+
 ## [0.4.5] - 2026-05-12
 
 ### Fixed
