@@ -61,9 +61,9 @@ type Controller struct {
 
 	mu          sync.Mutex
 	childPID    int
-	features    []string     // populated by negotiateCapabilities
+	features    []string      // populated by negotiateCapabilities
 	capReplyCh  chan []string // one-shot channel; closed after negotiation
-	crashSource atomic.Int32 // CrashSource; only meaningful when state==StateCrashed
+	crashSource atomic.Int32  // CrashSource; only meaningful when state==StateCrashed
 
 	ptySubs ptySubscribers // fan-out for inbound MsgTypePTYData frames
 
@@ -109,7 +109,7 @@ func (c *Controller) SetOnStateChange(cb func(cwtypes.State)) {
 // callbacks never miss a transition and never fire on no-ops.
 func (c *Controller) setState(s cwtypes.State) {
 	old := c.state.Swap(int32(s))
-	if int32(old) == int32(s) {
+	if old == int32(s) {
 		return
 	}
 	c.onStateChangeMu.Lock()
@@ -174,14 +174,14 @@ func (c *Controller) Start(ctx context.Context) error {
 	}
 	c.handle = handle
 
-	cap := c.opts.OutboxCapacity
-	if cap <= 0 {
-		cap = 1024
+	capacity := c.opts.OutboxCapacity
+	if capacity <= 0 {
+		capacity = 1024
 	}
 	conn, err := ipc.NewConn(ipc.ConnConfig{
 		RWC:        handle.Socket,
 		SpillerDir: filepath.Join(c.opts.RuntimeDir, "outbox-"+c.opts.Spec.ID),
-		Capacity:   cap,
+		Capacity:   capacity,
 		WALBytes:   256 * 1024 * 1024,
 		DisableWAL: c.opts.DisableWAL,
 	})

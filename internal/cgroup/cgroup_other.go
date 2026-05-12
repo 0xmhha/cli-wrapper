@@ -16,8 +16,8 @@ func New(parent, name string) (*Group, error) {
 	return nil, ErrUnsupportedPlatform
 }
 
-func (g *Group) AddPID(pid int) error          { return ErrUnsupportedPlatform }
-func (g *Group) SetCPUMax(m CPUMax) error      { return ErrUnsupportedPlatform }
+func (g *Group) AddPID(pid int) error           { return ErrUnsupportedPlatform }
+func (g *Group) SetCPUMax(m CPUMax) error       { return ErrUnsupportedPlatform }
 func (g *Group) SetMemoryMax(m MemoryMax) error { return ErrUnsupportedPlatform }
-func (g *Group) SetIOWeight(w IOWeight) error  { return ErrUnsupportedPlatform }
-func (g *Group) Remove() error                 { return ErrUnsupportedPlatform }
+func (g *Group) SetIOWeight(w IOWeight) error   { return ErrUnsupportedPlatform }
+func (g *Group) Remove() error                  { return ErrUnsupportedPlatform }

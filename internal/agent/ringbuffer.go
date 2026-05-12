@@ -11,7 +11,6 @@ import "sync"
 // (PTY OnData callback) acquires the mutex once per chunk; under bench's
 // output_throughput workload (~65 MB/s through cliwrap), this is well
 // below saturation.
-//
 type ringBuffer struct {
 	mu   sync.Mutex
 	data []byte // capacity == size
@@ -35,10 +34,10 @@ func (rb *ringBuffer) Write(p []byte) {
 	rb.mu.Lock()
 	defer rb.mu.Unlock()
 
-	cap := len(rb.data)
-	if len(p) >= cap {
-		// p alone fills or exceeds buffer; copy only the last `cap` bytes.
-		copy(rb.data, p[len(p)-cap:])
+	capacity := len(rb.data)
+	if len(p) >= capacity {
+		// p alone fills or exceeds buffer; copy only the last `capacity` bytes.
+		copy(rb.data, p[len(p)-capacity:])
 		rb.head = 0
 		rb.full = true
 		return
@@ -50,7 +49,7 @@ func (rb *ringBuffer) Write(p []byte) {
 		copy(rb.data, p[first:])
 		rb.full = true
 	}
-	rb.head = (rb.head + len(p)) % cap
+	rb.head = (rb.head + len(p)) % capacity
 	if rb.head == 0 && len(p) > 0 {
 		rb.full = true
 	}

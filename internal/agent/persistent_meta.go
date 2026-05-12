@@ -19,7 +19,6 @@ import (
 // Stored at <sessionDir>/meta.json with mode 0600.
 //
 // The Version field is for future schema migrations. v1 is "1.0".
-//
 type PersistentMeta struct {
 	Version   string       `json:"version"`
 	ID        string       `json:"id"`

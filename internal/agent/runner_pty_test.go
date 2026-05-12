@@ -11,10 +11,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/0xmhha/cli-wrapper/internal/cwtypes"
-	"github.com/0xmhha/cli-wrapper/internal/ipc"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
+
+	"github.com/0xmhha/cli-wrapper/internal/cwtypes"
+	"github.com/0xmhha/cli-wrapper/internal/ipc"
 )
 
 // ptyDataSender is a test double for chunkSender that captures MsgTypePTYData frames.
@@ -148,7 +149,7 @@ func TestRunner_HandlesResize(t *testing.T) {
 	runDone := make(chan struct{})
 	go func() {
 		defer close(runDone)
-		_ , _ = r.Run(ctx, RunSpec{
+		_, _ = r.Run(ctx, RunSpec{
 			Command:     "/bin/sleep",
 			Args:        []string{"3"},
 			PTY:         &cwtypes.PTYConfig{InitialCols: 80, InitialRows: 24},
@@ -158,12 +159,12 @@ func TestRunner_HandlesResize(t *testing.T) {
 
 	// Wait for the PTY process to become active.
 	require.Eventually(t, func() bool {
-		return r.ActivePTYProc() != nil
+		return r.activePTYProc() != nil
 	}, 2*time.Second, 5*time.Millisecond, "ptyProc never became active")
 
 	require.NoError(t, r.ResizeActivePTY(132, 50))
 
-	cols, rows, err := r.ActivePTYProc().Winsize()
+	cols, rows, err := r.activePTYProc().Winsize()
 	require.NoError(t, err)
 	require.Equal(t, uint16(132), cols)
 	require.Equal(t, uint16(50), rows)
@@ -179,11 +180,11 @@ func TestRunner_HandlesResize(t *testing.T) {
 // newPTYDataSender returns a fresh ptyDataSender ready for use.
 func newPTYDataSender() *ptyDataSender { return &ptyDataSender{} }
 
-// waitForActivePTY blocks until r.ActivePTYProc() is non-nil or timeout elapses.
+// waitForActivePTY blocks until r.activePTYProc() is non-nil or timeout elapses.
 func waitForActivePTY(t *testing.T, r *Runner, timeout time.Duration) {
 	t.Helper()
 	require.Eventually(t, func() bool {
-		return r.ActivePTYProc() != nil
+		return r.activePTYProc() != nil
 	}, timeout, 5*time.Millisecond, "ptyProc never became active")
 }
 
@@ -219,7 +220,7 @@ func TestRunner_ForwardsPTYWriteToChild(t *testing.T) {
 
 	// Wait for the PTY process to become active.
 	require.Eventually(t, func() bool {
-		return r.ActivePTYProc() != nil
+		return r.activePTYProc() != nil
 	}, 2*time.Second, 5*time.Millisecond, "ptyProc never became active")
 
 	// Send input to /bin/cat via the PTY write path.

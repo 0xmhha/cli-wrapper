@@ -24,7 +24,6 @@ const defaultRingBufferSize = 256 * 1024
 
 // persistentState holds the per-session resources owned by a persistent
 // agent: meta files, UNIX listener, ring buffer, and the attach lock.
-//
 type persistentState struct {
 	sessionDir string
 	listener   *net.UnixListener

@@ -24,7 +24,7 @@ type Sink interface {
 // chunk arrived. Required so SnapshotFiltered can filter by --since.
 type chunkRecord struct {
 	Bytes []byte
-	Ts    time.Time
+	TS    time.Time
 }
 
 // chunkBuffer is a per-(process, stream) FIFO of chunkRecords with byte-budget
@@ -53,7 +53,7 @@ func (b *chunkBuffer) append(data []byte, ts time.Time) {
 	// corrupt earlier chunk content.
 	c := make([]byte, len(data))
 	copy(c, data)
-	b.chunks = append(b.chunks, chunkRecord{Bytes: c, Ts: ts})
+	b.chunks = append(b.chunks, chunkRecord{Bytes: c, TS: ts})
 	b.totalBytes += len(c)
 	for b.totalBytes > b.capacity && len(b.chunks) > 1 {
 		b.totalBytes -= len(b.chunks[0].Bytes)
@@ -79,7 +79,7 @@ func (b *chunkBuffer) snapshot() []byte {
 func (b *chunkBuffer) snapshotFiltered(since time.Time, lines int) []byte {
 	first := 0
 	if !since.IsZero() {
-		for first < len(b.chunks) && b.chunks[first].Ts.Before(since) {
+		for first < len(b.chunks) && b.chunks[first].TS.Before(since) {
 			first++
 		}
 	}

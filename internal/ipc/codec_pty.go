@@ -38,22 +38,36 @@ type CapabilityReply struct {
 	Features []string `msgpack:"features"`
 }
 
-func EncodePTYData(d PTYData) ([]byte, error)   { return msgpack.Marshal(d) }
-func DecodePTYData(b []byte) (PTYData, error)   { var d PTYData; return d, msgpack.Unmarshal(b, &d) }
-func EncodePTYWrite(d PTYWrite) ([]byte, error)  { return msgpack.Marshal(d) }
-func DecodePTYWrite(b []byte) (PTYWrite, error)  { var d PTYWrite; return d, msgpack.Unmarshal(b, &d) }
+func EncodePTYData(d PTYData) ([]byte, error)     { return msgpack.Marshal(d) }
+func EncodePTYWrite(d PTYWrite) ([]byte, error)   { return msgpack.Marshal(d) }
 func EncodePTYResize(d PTYResize) ([]byte, error) { return msgpack.Marshal(d) }
+func EncodePTYSignal(d PTYSignal) ([]byte, error) { return msgpack.Marshal(d) }
+func EncodeCapabilityReply(r CapabilityReply) ([]byte, error) {
+	return msgpack.Marshal(r)
+}
+
+func DecodePTYData(b []byte) (PTYData, error) {
+	var d PTYData
+	err := msgpack.Unmarshal(b, &d)
+	return d, err
+}
+func DecodePTYWrite(b []byte) (PTYWrite, error) {
+	var d PTYWrite
+	err := msgpack.Unmarshal(b, &d)
+	return d, err
+}
 func DecodePTYResize(b []byte) (PTYResize, error) {
 	var d PTYResize
-	return d, msgpack.Unmarshal(b, &d)
+	err := msgpack.Unmarshal(b, &d)
+	return d, err
 }
-func EncodePTYSignal(d PTYSignal) ([]byte, error) { return msgpack.Marshal(d) }
 func DecodePTYSignal(b []byte) (PTYSignal, error) {
 	var d PTYSignal
-	return d, msgpack.Unmarshal(b, &d)
+	err := msgpack.Unmarshal(b, &d)
+	return d, err
 }
-func EncodeCapabilityReply(r CapabilityReply) ([]byte, error) { return msgpack.Marshal(r) }
 func DecodeCapabilityReply(b []byte) (CapabilityReply, error) {
 	var r CapabilityReply
-	return r, msgpack.Unmarshal(b, &r)
+	err := msgpack.Unmarshal(b, &r)
+	return r, err
 }

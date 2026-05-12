@@ -148,7 +148,6 @@ type ResumePayload struct {
 // PTY ring buffer, sent immediately after MsgHello when a new host attaches
 // to a persistent session. The host's controller queues this dump and
 // delivers it as the first chunk(s) to the next SubscribePTYData subscriber.
-//
 type PTYRingDumpPayload struct {
 	Bytes []byte `msgpack:"b"`
 }

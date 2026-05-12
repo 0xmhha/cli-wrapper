@@ -88,7 +88,7 @@ func (c *Controller) SendPTY(_ context.Context, msgType ipc.MsgType, payload []b
 // If the controller is not configured for PTY mode the caller should guard
 // with Spec.PTY != nil before calling this method. SubscribePTYData itself
 // does not validate the spec; it simply registers a receiver.
-func (c *Controller) SubscribePTYData() (<-chan PTYData, func()) {
+func (c *Controller) SubscribePTYData() (ch <-chan PTYData, unsubscribe func()) {
 	s := c.ptySubs.add()
 	dbg := os.Getenv("CLIWRAP_DEBUG") == "1"
 

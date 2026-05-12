@@ -49,11 +49,11 @@ type logWatcher struct {
 // chunks are also persisted to disk (rotated per-stream).
 func (m *Manager) ensureCollector() *logcollect.Collector {
 	m.logs.collectorOnce.Do(func() {
-		cap := m.logRingBufferBytes
-		if cap <= 0 {
-			cap = DefaultLogRingBufferBytes
+		capacity := m.logRingBufferBytes
+		if capacity <= 0 {
+			capacity = DefaultLogRingBufferBytes
 		}
-		opts := logcollect.CollectorOptions{RingBufferBytes: cap}
+		opts := logcollect.CollectorOptions{RingBufferBytes: capacity}
 		if m.logFileDir != "" {
 			opts.ExtraSinks = append(opts.ExtraSinks, logcollect.NewFileSink(logcollect.FileSinkOptions{
 				Dir:      m.logFileDir,

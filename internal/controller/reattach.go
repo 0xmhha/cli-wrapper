@@ -72,14 +72,14 @@ func NewControllerFromReattach(opts ReattachOptions) (*Controller, error) {
 	c.capReplyCh = make(chan []string, 1)
 	close(c.capReplyCh)
 
-	cap := opts.OutboxCapacity
-	if cap <= 0 {
-		cap = 1024
+	capacity := opts.OutboxCapacity
+	if capacity <= 0 {
+		capacity = 1024
 	}
 	conn, err := ipc.NewConn(ipc.ConnConfig{
 		RWC:        opts.Conn,
 		SpillerDir: filepath.Join(opts.RuntimeDir, "outbox-reattach-"+opts.Spec.ID),
-		Capacity:   cap,
+		Capacity:   capacity,
 		WALBytes:   256 * 1024 * 1024,
 		DisableWAL: opts.DisableWAL,
 	})

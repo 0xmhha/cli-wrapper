@@ -61,9 +61,9 @@ const (
 
 // PTY mode (host -> agent).
 const (
-	MsgTypePTYWrite        MsgType = 0x20
-	MsgTypePTYResize       MsgType = 0x22
-	MsgTypePTYSignal       MsgType = 0x23
+	MsgTypePTYWrite  MsgType = 0x20
+	MsgTypePTYResize MsgType = 0x22
+	MsgTypePTYSignal MsgType = 0x23
 )
 
 // Capability handshake (host -> agent).

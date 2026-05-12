@@ -7,7 +7,6 @@
 // Safety: this test deliberately drives the host toward kern.maxproc
 // exhaustion (the very state CW-G3 produces). Multiple gates protect the
 // developer's machine. See spec §"Test Strategy → Test safety constraints".
-//
 package chaos
 
 import (

@@ -12,6 +12,7 @@ import (
 	"syscall"
 
 	"github.com/creack/pty"
+
 	"github.com/0xmhha/cli-wrapper/internal/cwtypes"
 )
 
@@ -92,7 +93,7 @@ func (p *ptyProc) Resize(cols, rows uint16) error {
 }
 
 // Winsize returns the current PTY window dimensions as (cols, rows).
-func (p *ptyProc) Winsize() (uint16, uint16, error) {
+func (p *ptyProc) Winsize() (cols, rows uint16, err error) {
 	sz, err := pty.GetsizeFull(p.ptmx)
 	if err != nil {
 		return 0, 0, err

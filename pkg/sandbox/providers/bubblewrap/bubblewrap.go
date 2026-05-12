@@ -145,11 +145,13 @@ func buildBwrapArgs(c config) []string {
 	// Default rootfs: read-only bind of host /. This is the sane default
 	// for "run my CLI against the host's filesystem but stop it from
 	// modifying anything outside /tmp".
-	args = append(args, "--ro-bind", "/", "/")
-	// Fresh /proc and /dev for the new pid/uts namespaces.
-	args = append(args, "--proc", "/proc", "--dev", "/dev")
-	// Isolated /tmp so the CLI's scratch files don't pollute the host.
-	args = append(args, "--tmpfs", "/tmp")
+	args = append(args,
+		"--ro-bind", "/", "/",
+		// Fresh /proc and /dev for the new pid/uts namespaces.
+		"--proc", "/proc", "--dev", "/dev",
+		// Isolated /tmp so the CLI's scratch files don't pollute the host.
+		"--tmpfs", "/tmp",
+	)
 	// Extra read-only binds (host path == sandbox path).
 	for _, p := range c.bindRO {
 		args = append(args, "--ro-bind", p, p)
@@ -202,8 +204,7 @@ func (i *instance) Exec(cmd string, args []string, env map[string]string) (*exec
 	}
 	full := make([]string, 0, len(i.bwrapArg)+2+len(args))
 	full = append(full, i.bwrapArg...)
-	full = append(full, "--")
-	full = append(full, cmd)
+	full = append(full, "--", cmd)
 	full = append(full, args...)
 	c := exec.Command(i.bwrap, full...)
 	c.Env = append(os.Environ(), envSlice(env)...)

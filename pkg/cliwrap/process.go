@@ -276,19 +276,20 @@ func (p *processHandle) Signal(ctx context.Context, sig syscall.Signal) error {
 
 // SubscribePTYData registers a receiver for PTY output frames.
 // If Spec.PTY is nil the returned channel is immediately closed.
-func (p *processHandle) SubscribePTYData() (<-chan PTYData, func()) {
+func (p *processHandle) SubscribePTYData() (ch <-chan PTYData, unsubscribe func()) {
+	closedEmptyChan := func() <-chan PTYData {
+		c := make(chan PTYData)
+		close(c)
+		return c
+	}
 	if p.spec.PTY == nil {
-		ch := make(chan PTYData)
-		close(ch)
-		return ch, func() {}
+		return closedEmptyChan(), func() {}
 	}
 	p.mu.Lock()
 	ctrl := p.ctrl
 	p.mu.Unlock()
 	if ctrl == nil {
-		ch := make(chan PTYData)
-		close(ch)
-		return ch, func() {}
+		return closedEmptyChan(), func() {}
 	}
 	return ctrl.SubscribePTYData()
 }

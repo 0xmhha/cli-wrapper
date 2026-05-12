@@ -29,7 +29,6 @@ var ErrNoActivePTY = errors.New("agent: no active PTY child")
 // strictly less than host AgentHandle.Close's grace (3.0s). Violating this
 // cascade reintroduces CW-G3 (host SIGKILLs agent before runner finishes
 // cmd.Wait → child orphaned).
-//
 const defaultStopTimeout = 2 * time.Second
 
 // RunSpec describes the child process to fork/exec.
@@ -94,9 +93,9 @@ func NewRunner() *Runner {
 // Call this before Run when RunSpec.PTY is non-nil.
 func (r *Runner) SetSender(s chunkSender) { r.sender = s }
 
-// ActivePTYProc returns the currently active ptyProc, or nil if none is running.
+// activePTYProc returns the currently active ptyProc, or nil if none is running.
 // Safe for concurrent use. Used by Tasks 11-13 to dispatch PTY control messages.
-func (r *Runner) ActivePTYProc() *ptyProc {
+func (r *Runner) activePTYProc() *ptyProc {
 	r.ptyMu.Lock()
 	defer r.ptyMu.Unlock()
 	return r.activePTY
@@ -105,7 +104,7 @@ func (r *Runner) ActivePTYProc() *ptyProc {
 // WriteToActivePTY forwards b to the running PTY child's stdin.
 // Returns ErrNoActivePTY if no PTY child is currently active.
 func (r *Runner) WriteToActivePTY(b []byte) error {
-	p := r.ActivePTYProc()
+	p := r.activePTYProc()
 	if p == nil {
 		return ErrNoActivePTY
 	}
@@ -115,7 +114,7 @@ func (r *Runner) WriteToActivePTY(b []byte) error {
 // ResizeActivePTY sends TIOCSWINSZ to the running PTY child with the given
 // cols and rows. Returns ErrNoActivePTY if no PTY child is currently active.
 func (r *Runner) ResizeActivePTY(cols, rows uint16) error {
-	p := r.ActivePTYProc()
+	p := r.activePTYProc()
 	if p == nil {
 		return ErrNoActivePTY
 	}
@@ -125,7 +124,7 @@ func (r *Runner) ResizeActivePTY(cols, rows uint16) error {
 // SignalActivePTY delivers sig to the foreground process group of the running
 // PTY child. Returns ErrNoActivePTY if no PTY child is currently active.
 func (r *Runner) SignalActivePTY(sig syscall.Signal) error {
-	p := r.ActivePTYProc()
+	p := r.activePTYProc()
 	if p == nil {
 		return ErrNoActivePTY
 	}

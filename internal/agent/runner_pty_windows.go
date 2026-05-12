@@ -32,12 +32,12 @@ func spawnPTY(ctx context.Context, spec RunSpec) (*ptyProc, error) {
 	return nil, ErrPTYUnsupportedOnWindows
 }
 
-func setWinsize(f *os.File, cols, rows uint16) error    { return ErrPTYUnsupportedOnWindows }
-func (p *ptyProc) Resize(cols, rows uint16) error       { return ErrPTYUnsupportedOnWindows }
-func (p *ptyProc) Winsize() (uint16, uint16, error)     { return 0, 0, ErrPTYUnsupportedOnWindows }
-func (p *ptyProc) OnData(cb func([]byte))               { p.onData = cb }
-func (p *ptyProc) Done() <-chan struct{}                { return p.closeCh }
-func (p *ptyProc) Close() error                         { return ErrPTYUnsupportedOnWindows }
-func (p *ptyProc) WriteInput(b []byte) error            { return ErrPTYUnsupportedOnWindows }
-func (p *ptyProc) Signal(sig syscall.Signal) error      { return ErrPTYUnsupportedOnWindows }
-func (p *ptyProc) startReadPump()                        {}
+func setWinsize(f *os.File, cols, rows uint16) error { return ErrPTYUnsupportedOnWindows }
+func (p *ptyProc) Resize(cols, rows uint16) error    { return ErrPTYUnsupportedOnWindows }
+func (p *ptyProc) Winsize() (uint16, uint16, error)  { return 0, 0, ErrPTYUnsupportedOnWindows }
+func (p *ptyProc) OnData(cb func([]byte))            { p.onData = cb }
+func (p *ptyProc) Done() <-chan struct{}             { return p.closeCh }
+func (p *ptyProc) Close() error                      { return ErrPTYUnsupportedOnWindows }
+func (p *ptyProc) WriteInput(b []byte) error         { return ErrPTYUnsupportedOnWindows }
+func (p *ptyProc) Signal(sig syscall.Signal) error   { return ErrPTYUnsupportedOnWindows }
+func (p *ptyProc) startReadPump()                    {}

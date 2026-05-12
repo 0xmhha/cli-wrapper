@@ -71,11 +71,10 @@ func (d *Dispatcher) SetPersistentShutdown(ch chan struct{}) {
 	d.shutdownReq = ch
 }
 
-// persistentSessionDir, when set, enables CW-G4 meta.json updates on
-// StartChild — the full Spec (Command, Args, PTY config, etc.) is recorded
-// so reattach hosts can reconstruct it. Required because initPersistent
-// runs BEFORE StartChild arrives, so the initial meta.json only has the
-// agent ID.
+// SetPersistentSessionDir enables CW-G4 meta.json updates on StartChild —
+// the full Spec (Command, Args, PTY config, etc.) is recorded so reattach
+// hosts can reconstruct it. Required because initPersistent runs BEFORE
+// StartChild arrives, so the initial meta.json only has the agent ID.
 func (d *Dispatcher) SetPersistentSessionDir(dir string) {
 	d.persistentSessionDir = dir
 }
@@ -300,6 +299,7 @@ func (d *Dispatcher) startChild(p ipc.StartChildPayload) {
 // inside Runner via RunSpec.StopTimeout, not here: cancel() triggers the
 // SIGTERM→SIGKILL escalation, after which Runner.Run returns and wg.Done()
 // fires. wg.Wait() is therefore bounded by StopTimeout.
+//
 //gocritic:ignore
 func (d *Dispatcher) stopChild(_ time.Duration) {
 	if os.Getenv("CLIWRAP_DEBUG") == "1" {
