@@ -199,24 +199,36 @@ func (p *processHandle) Close(ctx context.Context) error {
 	p.mu.Lock()
 	ctrl := p.ctrl
 	persistent := p.spec.Persistent
-	if ctrl != nil {
-		p.lastStatus = Status{
-			State:    ctrl.State(),
-			ChildPID: ctrl.ChildPID(),
-		}
-	}
 	p.ctrl = nil
 	p.mu.Unlock()
 	if ctrl == nil {
 		return nil
 	}
+
 	// CW-G4: on persistent sessions, Close releases this host's connection
 	// only; the agent stays alive in detached mode for the next reattach.
 	// Use h.Stop(ctx) to fully terminate the persistent session.
+	var err error
 	if persistent {
-		return ctrl.CloseConnOnly(ctx)
+		err = ctrl.CloseConnOnly(ctx)
+	} else {
+		err = ctrl.Close(ctx)
 	}
-	return ctrl.Close(ctx)
+
+	// Snapshot the controller's terminal state AFTER Close so subsequent
+	// p.Status() calls see the post-shutdown state instead of whatever
+	// transient state was active mid-Close (usually StateRunning). Pre-fix
+	// hosts that asserted Status() == Exited immediately after Close
+	// observed Running and broke (concrete example: ai-m's
+	// TestCliwrap_CreateLookupTerminate).
+	p.mu.Lock()
+	p.lastStatus = Status{
+		State:    ctrl.State(),
+		ChildPID: ctrl.ChildPID(),
+	}
+	p.mu.Unlock()
+
+	return err
 }
 
 // WriteInput forwards b as PTY stdin input to the running child.

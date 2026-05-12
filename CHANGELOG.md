@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+## [0.4.5] - 2026-05-12
+
+### Fixed
+- `processHandle.Close` now snapshots `lastStatus` AFTER invoking
+  `ctrl.Close`, not before. The previous order returned whatever
+  state was active mid-shutdown (typically `StateRunning`) from
+  any `Status()` call made after Close — hosts that asserted a
+  terminal state immediately after Close observed Running and
+  broke. Regression guarded by
+  `TestProcessHandle_CloseStatusReflectsTerminalState`.
+
 ## [0.4.4] - 2026-05-11
 
 ### Added
