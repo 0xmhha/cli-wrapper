@@ -5,6 +5,7 @@ package cliwrap
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
@@ -24,8 +25,13 @@ type Manager struct {
 	logFileMaxSize     int64  // 0 = FileRotator default
 	logFileMaxFiles    int    // 0 = FileRotator default
 	outboxCapacity     int    // 0 = controller default (1024)
-	disableWAL         bool   // false = WAL on (legacy default)
-	spawner            *supervise.Spawner
+	// agentOutboxCapacity, when > 0, is propagated to the agent process
+	// via the CLIWRAP_AGENT_OUTBOX_CAPACITY env var. Mirrors
+	// outboxCapacity for the host side; lets high-throughput cases tune
+	// the agent's outbox to avoid agent-side spills.
+	agentOutboxCapacity int
+	disableWAL          bool // false = WAL on (legacy default)
+	spawner             *supervise.Spawner
 
 	mu      sync.Mutex
 	handles map[string]*processHandle
@@ -63,10 +69,20 @@ func NewManager(opts ...ManagerOption) (*Manager, error) {
 	if m.persistentDir == "" {
 		m.persistentDir = filepath.Join(os.Getenv("HOME"), ".cliwrap", "sessions")
 	}
-	m.spawner = supervise.NewSpawner(supervise.SpawnerOptions{
+	spawnOpts := supervise.SpawnerOptions{
 		AgentPath:  m.agentPath,
 		RuntimeDir: m.runtimeDir,
-	})
+	}
+	// Propagate agent-side outbox tuning via env var. The agent's
+	// DefaultConfig reads CLIWRAP_AGENT_OUTBOX_CAPACITY and overrides
+	// its hardcoded 1024 default when the value parses as a positive
+	// integer. Mirrors the host-side WithOutboxCapacity surface
+	// introduced for v0.4.0.
+	if m.agentOutboxCapacity > 0 {
+		spawnOpts.ExtraEnv = append(spawnOpts.ExtraEnv,
+			fmt.Sprintf("CLIWRAP_AGENT_OUTBOX_CAPACITY=%d", m.agentOutboxCapacity))
+	}
+	m.spawner = supervise.NewSpawner(spawnOpts)
 	return m, nil
 }
 

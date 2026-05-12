@@ -11,6 +11,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/0xmhha/cli-wrapper/internal/cwtypes"
@@ -34,7 +35,14 @@ type Config struct {
 }
 
 // DefaultConfig returns sensible defaults, reading host-supplied env vars
-// CLIWRAP_AGENT_ID and CLIWRAP_AGENT_RUNTIME when present.
+// when present:
+//
+//   - CLIWRAP_AGENT_ID — overrides AgentID (set by spawner)
+//   - CLIWRAP_AGENT_RUNTIME — overrides RuntimeDir (set by spawner)
+//   - CLIWRAP_AGENT_OUTBOX_CAPACITY — overrides OutboxCapacity when set
+//     and parseable as a positive integer. Lets hosts use
+//     WithAgentOutboxCapacity to tune the agent's outbox for high-
+//     throughput PTY scenarios without recompiling the agent binary.
 func DefaultConfig() Config {
 	cfg := Config{
 		IPCFD:          3,
@@ -47,6 +55,11 @@ func DefaultConfig() Config {
 	}
 	if v := os.Getenv("CLIWRAP_AGENT_RUNTIME"); v != "" {
 		cfg.RuntimeDir = v
+	}
+	if v := os.Getenv("CLIWRAP_AGENT_OUTBOX_CAPACITY"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			cfg.OutboxCapacity = n
+		}
 	}
 	return cfg
 }

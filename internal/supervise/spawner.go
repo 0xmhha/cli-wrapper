@@ -95,6 +95,12 @@ func NewSpawner(opts SpawnerOptions) *Spawner {
 	return &Spawner{opts: opts}
 }
 
+// Options returns the SpawnerOptions this Spawner was constructed with.
+// Exposed so cross-package tests can verify env-var propagation set up
+// at Manager construction time (e.g., CLIWRAP_AGENT_OUTBOX_CAPACITY)
+// without spawning a real child process.
+func (s *Spawner) Options() SpawnerOptions { return s.opts }
+
 // Spawn creates a socket pair, execs the agent with one fd, and returns the
 // host side of the socket wrapped in a net.UnixConn.
 //

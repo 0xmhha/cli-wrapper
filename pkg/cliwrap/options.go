@@ -72,6 +72,24 @@ func WithOutboxCapacity(n int) ManagerOption {
 	return func(m *Manager) { m.outboxCapacity = n }
 }
 
+// WithAgentOutboxCapacity sets the IPC outbox slot count INSIDE the
+// agent process. WithOutboxCapacity tunes the host's outbox (host →
+// agent direction); this option tunes the agent's outbox (agent →
+// host direction), where PTY output frames accumulate when the host's
+// SubscribePTYData consumer is slow or backpressured.
+//
+// Zero or negative values keep the agent's legacy default (1024).
+// Propagated via the CLIWRAP_AGENT_OUTBOX_CAPACITY env var that the
+// spawner sets on every spawned agent; the agent's DefaultConfig
+// honors the variable when its value parses as a positive integer.
+//
+// For interactive PTY hosts whose terminals briefly stall (window
+// resize, paste, scrollback dump), values of 4096–16384 match the
+// guidance for the host side.
+func WithAgentOutboxCapacity(n int) ManagerOption {
+	return func(m *Manager) { m.agentOutboxCapacity = n }
+}
+
 // WithoutWAL disables the disk-backed write-ahead log on the outgoing
 // IPC direction for every session created by this Manager. When set,
 // outbox overflow drops messages instead of fsync-spilling to disk —
